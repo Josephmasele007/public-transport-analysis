@@ -1,0 +1,231 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}App Management - Admin Panel{% endblock %}
+
+{% block page_title %}App Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- App Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-line text-primary"></i> Dashboard App
+                    </h5>
+                    <p class="card-text">Visualize transportation data and analytics.</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <span class="badge bg-success">Active</span>
+                        <div class="btn-group">
+                            <a href="{% url 'admin_panel:home' %}" class="btn btn-sm btn-outline-primary">View</a>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#dashboardSettingsModal" title="Dashboard Settings">Settings</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-subway text-info"></i> Data Management App
+                    </h5>
+                    <p class="card-text">Manage transportation data and records.</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <span class="badge bg-success">Active</span>
+                        <div class="btn-group">
+                            <a href="{% url 'admin_panel:data_types' %}" class="btn btn-sm btn-outline-primary">View</a>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#stationsSettingsModal" title="Data Management Settings">Settings</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-users text-warning"></i> User Management App
+                    </h5>
+                    <p class="card-text">Manage system users and permissions.</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <span class="badge bg-success">Active</span>
+                        <div class="btn-group">
+                            <a href="{% url 'admin_panel:user_management' %}" class="btn btn-sm btn-outline-primary">View</a>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#explorerSettingsModal" title="User Management Settings">Settings</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Management Tools -->
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">App Management Tools</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <i class="fas fa-database fa-2x text-primary me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Data Management</h6>
+                                    <p class="mb-0 text-muted">Manage data across all applications</p>
+                                </div>
+                                <a href="{% url 'admin_panel:data_types' %}" class="btn btn-primary ms-auto">Access</a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <i class="fas fa-cogs fa-2x text-secondary me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">System Settings</h6>
+                                    <p class="mb-0 text-muted">Configure system-wide settings</p>
+                                </div>
+                                <a href="{% url 'admin_panel:system_settings' %}" class="btn btn-secondary ms-auto">Configure</a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <i class="fas fa-file-import fa-2x text-success me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Import Data</h6>
+                                    <p class="mb-0 text-muted">Import data into applications</p>
+                                </div>
+                                <a href="{% url 'admin_panel:import_data' %}" class="btn btn-success ms-auto">Import</a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <i class="fas fa-file-export fa-2x text-info me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Export Data</h6>
+                                    <p class="mb-0 text-muted">Export data from applications</p>
+                                </div>
+                                <a href="{% url 'admin_panel:export_data' %}" class="btn btn-info ms-auto">Export</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modals -->
+<div class="modal fade" id="dashboardSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dashboard App Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label" for="dashboardView">Default View</label>
+                        <select class="form-select" id="dashboardView" title="Select default dashboard view">
+                            <option>Summary View</option>
+                            <option>Detailed View</option>
+                            <option>Chart View</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="refreshInterval">Data Refresh Interval</label>
+                        <select class="form-select" id="refreshInterval" title="Select data refresh interval">
+                            <option>5 minutes</option>
+                            <option>15 minutes</option>
+                            <option>30 minutes</option>
+                            <option>1 hour</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Close settings">Close</button>
+                <button type="button" class="btn btn-primary" title="Save settings changes">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="stationsSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Data Management Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label" for="recordsPerPage">Records Per Page</label>
+                        <select class="form-select" id="recordsPerPage" title="Select records per page">
+                            <option>10</option>
+                            <option>25</option>
+                            <option>50</option>
+                            <option>100</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="defaultSort">Default Sort Field</label>
+                        <select class="form-select" id="defaultSort" title="Select default sort field">
+                            <option>ID</option>
+                            <option>Road Name</option>
+                            <option>Route Name</option>
+                            <option>Date Added</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Close settings">Close</button>
+                <button type="button" class="btn btn-primary" title="Save settings changes">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="explorerSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">User Management Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label" for="userTimeout">Session Timeout (minutes)</label>
+                        <select class="form-select" id="userTimeout" title="Select session timeout">
+                            <option>30</option>
+                            <option>60</option>
+                            <option>120</option>
+                            <option>240</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="passwordPolicy">Password Policy</label>
+                        <select class="form-select" id="passwordPolicy" title="Select password policy">
+                            <option>Standard</option>
+                            <option>Strong</option>
+                            <option>Very Strong</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Close settings">Close</button>
+                <button type="button" class="btn btn-primary" title="Save settings changes">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

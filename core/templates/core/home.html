@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Tanzania Transport Analysis - Home{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>Tanzania Transport Analysis</h1>
+        <p>Optimize your transportation decisions with data-driven insights</p>
+    </div>
+</div>
+
+<div class="features-grid">
+    <div class="feature-card">
+        <a href="{% url 'dashboard:dashboard' %}" class="feature-link">
+            <div class="card">
+                <i class="fas fa-chart-line"></i>
+                <h3>Dashboard</h3>
+                <p>View comprehensive transportation analytics and metrics</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="feature-card">
+        <a href="{% url 'explorer:index' %}" class="feature-link">
+            <div class="card">
+                <i class="fas fa-search"></i>
+                <h3>Explorer</h3>
+                <p>Explore transportation data and patterns</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="feature-card">
+        <a href="{% url 'stations:index' %}" class="feature-link">
+            <div class="card">
+                <i class="fas fa-bus"></i>
+                <h3>Stations</h3>
+                <p>Manage and analyze station information</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="feature-card">
+        <a href="{% url 'congestion:index' %}" class="feature-link">
+            <div class="card">
+                <i class="fas fa-traffic-light"></i>
+                <h3>Congestion</h3>
+                <p>Monitor and analyze traffic congestion</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="feature-card">
+        <a href="{% url 'travel_cost:index' %}" class="feature-link">
+            <div class="card">
+                <i class="fas fa-money-bill-wave"></i>
+                <h3>Travel Cost</h3>
+                <p>Calculate and optimize travel costs</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="feature-card">
+        <a href="{% url 'reports:index' %}" class="feature-link">
+            <div class="card">
+                <i class="fas fa-file-alt"></i>
+                <h3>Reports</h3>
+                <p>Generate detailed transportation reports</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %} 

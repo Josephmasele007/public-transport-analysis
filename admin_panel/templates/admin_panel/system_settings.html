@@ -1,0 +1,355 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}System Settings - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dark mode styles */
+    body.dark-mode {
+        background-color: #1a1a1a;
+        color: #ffffff;
+    }
+
+    body.dark-mode .card {
+        background-color: #2d2d2d;
+        border-color: #404040;
+    }
+
+    body.dark-mode .card-header {
+        background-color: #343434;
+        border-bottom-color: #404040;
+    }
+
+    body.dark-mode .form-control,
+    body.dark-mode .form-select {
+        background-color: #2d2d2d;
+        border-color: #404040;
+        color: #ffffff;
+    }
+
+    body.dark-mode .form-control:focus,
+    body.dark-mode .form-select:focus {
+        background-color: #363636;
+        border-color: #505050;
+        color: #ffffff;
+    }
+
+    body.dark-mode .list-group-item {
+        background-color: #2d2d2d;
+        border-color: #404040;
+        color: #ffffff;
+    }
+
+    .settings-saved {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}System Settings{% endblock %}
+
+{% block content %}
+<!-- Success Message Toast -->
+<div class="toast settings-saved align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" id="settingsSaved">
+    <div class="d-flex">
+        <div class="toast-body">
+            Settings saved successfully!
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Appearance Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Appearance Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'admin_panel:update_settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="appearance">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Theme Mode</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="theme_mode" id="light_mode" value="light" {% if settings.THEME_MODE == 'light' %}checked{% endif %} aria-label="Light Mode">
+                            <label class="form-check-label" for="light_mode">Light Mode</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="theme_mode" id="dark_mode" value="dark" {% if settings.THEME_MODE == 'dark' %}checked{% endif %} aria-label="Dark Mode">
+                            <label class="form-check-label" for="dark_mode">Dark Mode</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="primary_color" class="form-label">Primary Color</label>
+                        <input type="color" class="form-control form-control-color" id="primary_color" name="primary_color" value="{{ settings.PRIMARY_COLOR }}" title="Choose primary color">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Appearance Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">System Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Django Version</span>
+                        <span class="badge bg-primary rounded-pill">{{ django_version }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Python Version</span>
+                        <span class="badge bg-primary rounded-pill">{{ python_version }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Database Size</span>
+                        <span class="badge bg-primary rounded-pill">{{ db_size }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Last Backup</span>
+                        <span class="badge bg-primary rounded-pill">{{ last_backup }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Active Users</span>
+                        <span class="badge bg-primary rounded-pill">{{ active_users }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Backup Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'admin_panel:update_settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="backup">
+                    
+                    <div class="mb-3">
+                        <label for="backup_frequency" class="form-label">Auto Backup Frequency</label>
+                        <select class="form-select" id="backup_frequency" name="backup_frequency" title="Select backup frequency">
+                            <option value="daily" {% if settings.BACKUP_FREQUENCY == 'daily' %}selected{% endif %}>Daily</option>
+                            <option value="weekly" {% if settings.BACKUP_FREQUENCY == 'weekly' %}selected{% endif %}>Weekly</option>
+                            <option value="monthly" {% if settings.BACKUP_FREQUENCY == 'monthly' %}selected{% endif %}>Monthly</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="backup_retention" class="form-label">Keep Backups For</label>
+                        <select class="form-select" id="backup_retention" name="backup_retention" title="Select backup retention period">
+                            <option value="7" {% if settings.BACKUP_RETENTION == '7' %}selected{% endif %}>7 days</option>
+                            <option value="30" {% if settings.BACKUP_RETENTION == '30' %}selected{% endif %}>30 days</option>
+                            <option value="90" {% if settings.BACKUP_RETENTION == '90' %}selected{% endif %}>90 days</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Backup Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Security Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'admin_panel:update_settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="security">
+                    
+                    <div class="mb-3">
+                        <label for="session_timeout" class="form-label">Session Timeout (minutes)</label>
+                        <input type="number" class="form-control" id="session_timeout" name="session_timeout" value="{{ settings.SESSION_TIMEOUT }}" min="1" max="1440" title="Enter session timeout in minutes">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="max_login_attempts" class="form-label">Maximum Login Attempts</label>
+                        <input type="number" class="form-control" id="max_login_attempts" name="max_login_attempts" value="{{ settings.MAX_LOGIN_ATTEMPTS }}" min="1" max="10" title="Enter maximum login attempts">
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="require_2fa" id="require_2fa" {% if settings.REQUIRE_2FA == 'true' %}checked{% endif %} aria-label="Require Two-Factor Authentication for Admins">
+                            <label class="form-check-label" for="require_2fa">Require Two-Factor Authentication for Admins</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Security Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Email Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'admin_panel:update_settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="email">
+                    
+                    <div class="mb-3">
+                        <label for="smtp_host" class="form-label">SMTP Host</label>
+                        <input type="text" class="form-control" id="smtp_host" name="smtp_host" value="{{ settings.SMTP_HOST }}" placeholder="e.g., smtp.gmail.com" title="Enter SMTP host">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="smtp_port" class="form-label">SMTP Port</label>
+                        <input type="number" class="form-control" id="smtp_port" name="smtp_port" value="{{ settings.SMTP_PORT }}" placeholder="e.g., 587" title="Enter SMTP port">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="smtp_username" class="form-label">SMTP Username</label>
+                        <input type="text" class="form-control" id="smtp_username" name="smtp_username" value="{{ settings.SMTP_USERNAME }}" placeholder="Enter SMTP username" title="Enter SMTP username">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="smtp_password" class="form-label">SMTP Password</label>
+                        <input type="password" class="form-control" id="smtp_password" name="smtp_password" placeholder="Enter SMTP password" title="Enter SMTP password">
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="use_tls" id="use_tls" {% if settings.SMTP_USE_TLS == 'true' %}checked{% endif %} aria-label="Use TLS for SMTP">
+                            <label class="form-check-label" for="use_tls">Use TLS</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Email Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Notification Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'admin_panel:update_settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="notifications">
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="notify_backup" id="notify_backup" {% if settings.NOTIFY_BACKUP == 'true' %}checked{% endif %} aria-label="Notify on Backup Completion">
+                            <label class="form-check-label" for="notify_backup">Notify on Backup Completion</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="notify_error" id="notify_error" {% if settings.NOTIFY_ERROR == 'true' %}checked{% endif %} aria-label="Notify on System Errors">
+                            <label class="form-check-label" for="notify_error">Notify on System Errors</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="notify_login" id="notify_login" {% if settings.NOTIFY_LOGIN == 'true' %}checked{% endif %} aria-label="Notify on Admin Login">
+                            <label class="form-check-label" for="notify_login">Notify on Admin Login</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Notification Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme mode toggle
+    const themeRadios = document.querySelectorAll('input[name="theme_mode"]');
+    const body = document.body;
+    
+    function applyTheme(theme) {
+        body.classList.toggle('dark-mode', theme === 'dark');
+        localStorage.setItem('theme_mode', theme);
+    }
+
+    // Initialize theme from localStorage or settings
+    const savedTheme = localStorage.getItem('theme_mode') || '{{ settings.THEME_MODE }}';
+    document.querySelector(`input[name="theme_mode"][value="${savedTheme}"]`).checked = true;
+    applyTheme(savedTheme);
+
+    // Handle theme changes
+    themeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            applyTheme(this.value);
+        });
+    });
+
+    // Handle form submissions
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success toast
+                    const toast = new bootstrap.Toast(document.getElementById('settingsSaved'));
+                    toast.show();
+
+                    // Apply theme changes immediately if appearance settings
+                    if (formData.get('section') === 'appearance') {
+                        applyTheme(formData.get('theme_mode'));
+                        document.documentElement.style.setProperty('--bs-primary', formData.get('primary_color'));
+                    }
+                } else {
+                    alert(data.message || 'Error saving settings. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error saving settings. Please try again.');
+            });
+        });
+    });
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %} 

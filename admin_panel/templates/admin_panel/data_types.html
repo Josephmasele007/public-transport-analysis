@@ -1,0 +1,197 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Data Types Management - Admin Panel{% endblock %}
+
+{% block page_title %}Data Types Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row g-4">
+        <!-- Transportation Data Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="feature-icon-small d-inline-flex align-items-center justify-content-center text-primary bg-gradient fs-4 rounded-3 me-3">
+                            <i class="fas fa-bus"></i>
+                        </div>
+                        <h5 class="card-title mb-0">Transportation Data</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">Manage bus routes, stations, fares, and transportation schedules.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">
+                            <i class="fas fa-table me-1"></i>
+                            <span id="transportCount">{{ transport_count }}</span> records
+                        </div>
+                        <a href="{% url 'admin_panel:data_management' %}" class="btn btn-primary">
+                            Manage Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stations Data Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="feature-icon-small d-inline-flex align-items-center justify-content-center text-info bg-gradient fs-4 rounded-3 me-3">
+                            <i class="fas fa-subway"></i>
+                        </div>
+                        <h5 class="card-title mb-0">Stations Data</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">Manage BRT and bus stations, facilities, and station details.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">
+                            <i class="fas fa-table me-1"></i>
+                            <span id="stationsCount">{{ stations_count }}</span> records
+                        </div>
+                        <a href="{% url 'admin_panel:stations_management' %}" class="btn btn-info">
+                            Manage Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Routes Data Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="feature-icon-small d-inline-flex align-items-center justify-content-center text-success bg-gradient fs-4 rounded-3 me-3">
+                            <i class="fas fa-route"></i>
+                        </div>
+                        <h5 class="card-title mb-0">Routes Data</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">Manage transportation routes, schedules, and route details.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">
+                            <i class="fas fa-table me-1"></i>
+                            <span id="routesCount">{{ routes_count }}</span> records
+                        </div>
+                        <a href="{% url 'admin_panel:routes_management' %}" class="btn btn-success">
+                            Manage Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Traffic Data Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="feature-icon-small d-inline-flex align-items-center justify-content-center text-warning bg-gradient fs-4 rounded-3 me-3">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h5 class="card-title mb-0">Traffic Data</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">Manage traffic patterns, peak hours, and congestion data.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">
+                            <i class="fas fa-table me-1"></i>
+                            <span id="trafficCount">{{ traffic_count }}</span> records
+                        </div>
+                        <a href="{% url 'admin_panel:traffic_management' %}" class="btn btn-warning">
+                            Manage Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Data Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="feature-icon-small d-inline-flex align-items-center justify-content-center text-danger bg-gradient fs-4 rounded-3 me-3">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h5 class="card-title mb-0">Users Data</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">Manage user accounts, roles, and permissions.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">
+                            <i class="fas fa-table me-1"></i>
+                            <span id="usersCount">{{ users_count }}</span> records
+                        </div>
+                        <a href="{% url 'admin_panel:user_management' %}" class="btn btn-danger">
+                            Manage Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Data Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="feature-icon-small d-inline-flex align-items-center justify-content-center text-secondary bg-gradient fs-4 rounded-3 me-3">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <h5 class="card-title mb-0">Settings Data</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">Manage system settings and configurations.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">
+                            <i class="fas fa-table me-1"></i>
+                            <span id="settingsCount">{{ settings_count }}</span> records
+                        </div>
+                        <a href="{% url 'admin_panel:system_settings' %}" class="btn btn-secondary">
+                            Manage Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <a href="{% url 'admin_panel:import_data' %}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-file-import me-2"></i>Import Data
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{% url 'admin_panel:export_data' %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-file-export me-2"></i>Export Data
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{% url 'admin_panel:backup_data' %}" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-database me-2"></i>Backup Data
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.feature-icon-small {
+    width: 44px;
+    height: 44px;
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+.card:hover {
+    transform: translateY(-5px);
+    transition: transform 0.3s ease;
+}
+</style>
+{% endblock %} 

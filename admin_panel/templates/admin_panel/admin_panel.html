@@ -1,0 +1,152 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Admin Dashboard - Tanzania Transport Analysis{% endblock %}
+
+{% block page_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Routes</h5>
+                <h2>{{ active_routes }}</h2>
+                <p class="mb-0">Active transportation routes</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Users</h5>
+                <h2>{{ total_users }}</h2>
+                <p class="mb-0">Registered system users</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Stations</h5>
+                <h2>{{ total_stations }}</h2>
+                <p class="mb-0">Bus & BRT stations</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h5 class="card-title">Reports</h5>
+                <h2>{{ reports_count }}</h2>
+                <p class="mb-0">Generated reports</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">System Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Database Size</span>
+                        <span class="badge bg-primary rounded-pill">{{ db_size }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Last Backup</span>
+                        <span class="badge bg-info rounded-pill">{{ last_backup }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Active Apps</span>
+                        <span class="badge bg-success rounded-pill">{{ active_apps }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>System Version</span>
+                        <span class="badge bg-secondary rounded-pill">{{ system_version }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for activity in recent_activities %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ activity.title }}</h6>
+                            <small>{{ activity.timestamp }}</small>
+                        </div>
+                        <p class="mb-1">{{ activity.description }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Data Management</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'admin_panel:data_management' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-database me-2"></i>View All Routes
+                    </a>
+                    <a href="{% url 'admin_panel:import_data' %}" class="btn btn-outline-success">
+                        <i class="fas fa-file-import me-2"></i>Import New Data
+                    </a>
+                    <a href="{% url 'admin_panel:backup_data' %}" class="btn btn-outline-info">
+                        <i class="fas fa-save me-2"></i>Create Backup
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">User Management</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'admin_panel:user_management' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-users me-2"></i>Manage Users
+                    </a>
+                    <a href="{% url 'admin_panel:add_user' %}" class="btn btn-outline-success">
+                        <i class="fas fa-user-plus me-2"></i>Add New User
+                    </a>
+                    {% if user.is_superuser %}
+                    <a href="{% url 'admin_panel:system_settings' %}" class="btn btn-outline-info">
+                        <i class="fas fa-cog me-2"></i>System Settings
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div>
+    <a href="{% url 'admin_panel:data_management' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add New Route
+    </a>
+</div>
+{% endblock %}

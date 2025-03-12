@@ -1,0 +1,446 @@
+{% extends 'base.html' %}
+
+{% block title %}Explorer - Tanzania Transport Analysis{% endblock %}
+
+{% block content %}
+<div class="explorer-container">
+    <h1>Transport Data Explorer</h1>
+    <p class="subtitle">Analyze and visualize transportation patterns and trends</p>
+
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <h2>Data Filters</h2>
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label for="roadTypeFilter">Road Type</label>
+                <select id="roadTypeFilter" aria-label="Filter by road type">
+                    <option value="all">All Types</option>
+                    {% for type in road_types %}
+                    <option value="{{ type }}">{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="distanceRange">Distance Range (km)</label>
+                <div class="range-inputs">
+                    <input type="number" id="minDistance" placeholder="Min" min="0">
+                    <span>to</span>
+                    <input type="number" id="maxDistance" placeholder="Max" min="0">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label for="fareRange">Fare Range (₹)</label>
+                <div class="range-inputs">
+                    <input type="number" id="minFare" placeholder="Min" min="0">
+                    <span>to</span>
+                    <input type="number" id="maxFare" placeholder="Max" min="0">
+                </div>
+            </div>
+            <button id="applyFilters" class="filter-btn">Apply Filters</button>
+        </div>
+    </div>
+
+    <!-- Statistics Overview -->
+    <div class="stats-overview">
+        <h2>Key Statistics</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Average Fare</h3>
+                <p class="stat-value">₹{{ avg_fare }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Total Routes</h3>
+                <p class="stat-value">{{ total_routes }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Average Distance</h3>
+                <p class="stat-value">{{ avg_distance }} km</p>
+            </div>
+            <div class="stat-card">
+                <h3>Average Travel Time</h3>
+                <p class="stat-value">{{ avg_travel_time }} min</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-section">
+        <div class="chart-container">
+            <h3>Fare Distribution</h3>
+            <canvas id="fareChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Distance vs Travel Time</h3>
+            <canvas id="distanceTimeChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Road Types Distribution</h3>
+            <canvas id="roadTypeChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Peak Hours Traffic</h3>
+            <canvas id="peakHoursChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="data-table-section">
+        <h2>Detailed Route Data</h2>
+        <div class="table-container">
+            <table id="routeTable">
+                <thead>
+                    <tr>
+                        <th>Route Name</th>
+                        <th>Road Name</th>
+                        <th>Distance (km)</th>
+                        <th>Travel Time (min)</th>
+                        <th>Fare (₹)</th>
+                        <th>Road Type</th>
+                        <th>Traffic Lights</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in transportation_data %}
+                    <tr>
+                        <td>{{ data.route_name }}</td>
+                        <td>{{ data.road_name }}</td>
+                        <td>{{ data.road_distance }}</td>
+                        <td>{{ data.travel_time }}</td>
+                        <td>₹{{ data.fare }}</td>
+                        <td>{{ data.road_type }}</td>
+                        <td>{{ data.traffic_lights_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.explorer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.filters-section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #333;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.range-inputs input {
+    width: 100px;
+}
+
+.filter-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s;
+    align-self: flex-end;
+}
+
+.filter-btn:hover {
+    background: #0056b3;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.stat-card {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #007bff;
+    margin-top: 0.5rem;
+}
+
+.charts-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.chart-container {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.table-container {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Store transportation data
+    const transportData = JSON.parse('{{ transportation_data|escapejs }}');
+
+    // Initialize charts
+    initializeFareChart();
+    initializeDistanceTimeChart();
+    initializeRoadTypeChart();
+    initializePeakHoursChart();
+
+    // Filter functionality
+    document.getElementById('applyFilters').addEventListener('click', function() {
+        applyFilters();
+    });
+
+    function initializeFareChart() {
+        const ctx = document.getElementById('fareChart').getContext('2d');
+        const fares = transportData.map(data => data.fare);
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['0-100', '101-200', '201-300', '301-400', '400+'],
+                datasets: [{
+                    label: 'Number of Routes',
+                    data: calculateFareDistribution(fares),
+                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeDistanceTimeChart() {
+        const ctx = document.getElementById('distanceTimeChart').getContext('2d');
+        const data = transportData.map(data => ({
+            x: data.road_distance,
+            y: data.travel_time
+        }));
+        
+        new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Distance vs Travel Time',
+                    data: data,
+                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Distance (km)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Travel Time (min)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeRoadTypeChart() {
+        const ctx = document.getElementById('roadTypeChart').getContext('2d');
+        const roadTypes = {};
+        transportData.forEach(data => {
+            roadTypes[data.road_type] = (roadTypes[data.road_type] || 0) + 1;
+        });
+        
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(roadTypes),
+                datasets: [{
+                    data: Object.values(roadTypes),
+                    backgroundColor: [
+                        'rgba(0, 123, 255, 0.5)',
+                        'rgba(40, 167, 69, 0.5)',
+                        'rgba(255, 193, 7, 0.5)',
+                        'rgba(220, 53, 69, 0.5)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+    }
+
+    function initializePeakHoursChart() {
+        const ctx = document.getElementById('peakHoursChart').getContext('2d');
+        const peakHours = {};
+        transportData.forEach(data => {
+            peakHours[data.peak_hours] = (peakHours[data.peak_hours] || 0) + 1;
+        });
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(peakHours),
+                datasets: [{
+                    label: 'Number of Routes',
+                    data: Object.values(peakHours),
+                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function calculateFareDistribution(fares) {
+        const distribution = [0, 0, 0, 0, 0];
+        fares.forEach(fare => {
+            if (fare <= 100) distribution[0]++;
+            else if (fare <= 200) distribution[1]++;
+            else if (fare <= 300) distribution[2]++;
+            else if (fare <= 400) distribution[3]++;
+            else distribution[4]++;
+        });
+        return distribution;
+    }
+
+    function applyFilters() {
+        const roadType = document.getElementById('roadTypeFilter').value;
+        const minDistance = parseFloat(document.getElementById('minDistance').value) || 0;
+        const maxDistance = parseFloat(document.getElementById('maxDistance').value) || Infinity;
+        const minFare = parseFloat(document.getElementById('minFare').value) || 0;
+        const maxFare = parseFloat(document.getElementById('maxFare').value) || Infinity;
+
+        const filteredData = transportData.filter(data => {
+            return (roadType === 'all' || data.road_type === roadType) &&
+                   data.road_distance >= minDistance &&
+                   data.road_distance <= maxDistance &&
+                   data.fare >= minFare &&
+                   data.fare <= maxFare;
+        });
+
+        updateTable(filteredData);
+    }
+
+    function updateTable(data) {
+        const tbody = document.querySelector('#routeTable tbody');
+        tbody.innerHTML = '';
+        
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.route_name}</td>
+                <td>${item.road_name}</td>
+                <td>${item.road_distance}</td>
+                <td>${item.travel_time}</td>
+                <td>₹${item.fare}</td>
+                <td>${item.road_type}</td>
+                <td>${item.traffic_lights_count}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+});
+</script>
+{% endblock %} 

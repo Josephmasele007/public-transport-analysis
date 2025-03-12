@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+
+{% block title %}Traffic Congestion Analysis - Tanzania Transport{% endblock %}
+
+{% block content %}
+<div class="congestion-container">
+    <h1>Traffic Congestion Analysis</h1>
+    <p class="subtitle">Monitor and analyze traffic patterns across different routes</p>
+
+    <!-- Time Period Selector -->
+    <div class="time-selector">
+        <h2>Analysis Period</h2>
+        <div class="time-options">
+            <button class="time-btn active" data-period="peak">Peak Hours</button>
+            <button class="time-btn" data-period="off-peak">Off-Peak Hours</button>
+            <button class="time-btn" data-period="all">All Hours</button>
+        </div>
+    </div>
+
+    <!-- Congestion Overview -->
+    <div class="overview-section">
+        <h2>Congestion Overview</h2>
+        <div class="overview-grid">
+            <div class="overview-card">
+                <h3>Average Congestion Level</h3>
+                <div class="congestion-meter">
+                    <div class="meter-fill"></div>
+                </div>
+                <p class="congestion-value">{{ avg_congestion }}%</p>
+            </div>
+            <div class="overview-card">
+                <h3>Most Congested Area</h3>
+                <p class="highlight-value">{{ most_congested_area }}</p>
+                <p class="sub-text">Peak congestion: {{ max_congestion }}%</p>
+            </div>
+            <div class="overview-card">
+                <h3>Average Speed</h3>
+                <p class="highlight-value">{{ avg_speed }} km/h</p>
+                <p class="sub-text">During peak hours</p>
+            </div>
+            <div class="overview-card">
+                <h3>Traffic Light Impact</h3>
+                <p class="highlight-value">{{ avg_traffic_light_delay }} min</p>
+                <p class="sub-text">Average delay per route</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Map -->
+    <div class="map-section">
+        <h2>Traffic Heat Map</h2>
+        <div class="map-container">
+            <div id="trafficMap" class="traffic-map"></div>
+            <div class="map-legend">
+                <div class="legend-item">
+                    <span class="legend-color low"></span>
+                    <span>Low Congestion</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color medium"></span>
+                    <span>Medium Congestion</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color high"></span>
+                    <span>High Congestion</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Analysis -->
+    <div class="analysis-section">
+        <h2>Detailed Route Analysis</h2>
+        <div class="analysis-filters">
+            <select id="routeFilter" aria-label="Filter by route">
+                <option value="all">All Routes</option>
+                {% for route in routes %}
+                <option value="{{ route }}">{{ route }}</option>
+                {% endfor %}
+            </select>
+            <select id="congestionFilter" aria-label="Filter by congestion level">
+                <option value="all">All Levels</option>
+                <option value="low">Low Congestion</option>
+                <option value="medium">Medium Congestion</option>
+                <option value="high">High Congestion</option>
+            </select>
+        </div>
+        <div class="route-grid">
+            {% for data in transportation_data %}
+            <div class="route-card" data-route="{{ data.route_name }}" data-congestion="{{ data.congestion_level }}">
+                <div class="route-header">
+                    <h3>{{ data.road_name }}</h3>
+                    <span class="congestion-badge {{ data.congestion_level }}">{{ data.congestion_level }}</span>
+                </div>
+                <div class="route-metrics">
+                    <div class="metric">
+                        <span>Average Speed</span>
+                        <p>{{ data.average_speed }} km/h</p>
+                    </div>
+                    <div class="metric">
+                        <span>Traffic Lights</span>
+                        <p>{{ data.traffic_lights_count }}</p>
+                    </div>
+                    <div class="metric">
+                        <span>Peak Hours</span>
+                        <p>{{ data.peak_hours }}</p>
+                    </div>
+                    <div class="metric">
+                        <span>Road Type</span>
+                        <p>{{ data.road_type }}</p>
+                    </div>
+                </div>
+                <div class="congestion-chart">
+                    <canvas id="congestionChart-{{ data.id }}"></canvas>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.congestion-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.time-selector {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.time-options {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.time-btn {
+    padding: 0.8rem 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.time-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.overview-card {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.congestion-meter {
+    height: 20px;
+    background: #eee;
+    border-radius: 10px;
+    margin: 1rem 0;
+    overflow: hidden;
+}
+
+.meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336);
+    transition: width 0.3s ease;
+}
+
+.highlight-value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #007bff;
+    margin: 0.5rem 0;
+}
+
+.sub-text {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.map-section {
+    margin: 2rem 0;
+}
+
+.map-container {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.traffic-map {
+    height: 400px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.map-legend {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+.legend-color.low { background: #4CAF50; }
+.legend-color.medium { background: #FFC107; }
+.legend-color.high { background: #F44336; }
+
+.analysis-filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.analysis-filters select {
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.route-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.route-card {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.route-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.congestion-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.congestion-badge.low { background: #E8F5E9; color: #2E7D32; }
+.congestion-badge.medium { background: #FFF3E0; color: #E65100; }
+.congestion-badge.high { background: #FFEBEE; color: #C62828; }
+
+.route-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.metric span {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.metric p {
+    font-weight: 600;
+    color: #333;
+}
+
+.congestion-chart {
+    height: 150px;
+    margin-top: 1rem;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const transportData = JSON.parse('{{ transportation_data|escapejs }}');
+    
+    // Time period selector
+    const timeButtons = document.querySelectorAll('.time-btn');
+    timeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            timeButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            updateAnalysis(this.dataset.period);
+        });
+    });
+
+    // Route filter
+    document.getElementById('routeFilter').addEventListener('change', filterRoutes);
+    document.getElementById('congestionFilter').addEventListener('change', filterRoutes);
+
+    // Initialize congestion charts for each route
+    transportData.forEach(data => {
+        initializeCongestionChart(data);
+    });
+
+    // Set initial meter width
+    document.querySelector('.meter-fill').style.width = '{{ avg_congestion }}%';
+
+    function initializeCongestionChart(data) {
+        const ctx = document.getElementById(`congestionChart-${data.id}`).getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM'],
+                datasets: [{
+                    label: 'Congestion Level',
+                    data: generateCongestionData(data),
+                    borderColor: getCongestionColor(data.congestion_level),
+                    tension: 0.4,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    function generateCongestionData(data) {
+        // Generate sample congestion data based on peak hours and road type
+        const baseCongestion = getBaseCongestion(data.road_type);
+        const peakMultiplier = data.peak_hours.includes('9AM') ? 1.5 : 1;
+        return [30, 70 * peakMultiplier, 40, 50, 80 * peakMultiplier, 30].map(v => 
+            Math.min(100, Math.round(v * baseCongestion))
+        );
+    }
+
+    function getBaseCongestion(roadType) {
+        const congestionFactors = {
+            'Highway': 0.8,
+            'Main Road': 1,
+            'Local Road': 1.2,
+            'Expressway': 0.7
+        };
+        return congestionFactors[roadType] || 1;
+    }
+
+    function getCongestionColor(level) {
+        const colors = {
+            'low': '#4CAF50',
+            'medium': '#FFC107',
+            'high': '#F44336'
+        };
+        return colors[level] || '#666';
+    }
+
+    function filterRoutes() {
+        const routeFilter = document.getElementById('routeFilter').value;
+        const congestionFilter = document.getElementById('congestionFilter').value;
+        const cards = document.querySelectorAll('.route-card');
+
+        cards.forEach(card => {
+            const route = card.dataset.route;
+            const congestion = card.dataset.congestion;
+            const routeMatch = routeFilter === 'all' || route === routeFilter;
+            const congestionMatch = congestionFilter === 'all' || congestion === congestionFilter;
+            
+            card.style.display = routeMatch && congestionMatch ? 'block' : 'none';
+        });
+    }
+
+    function updateAnalysis(period) {
+        // Update overview metrics based on selected time period
+        const filteredData = filterDataByPeriod(transportData, period);
+        updateOverviewMetrics(filteredData);
+    }
+
+    function filterDataByPeriod(data, period) {
+        if (period === 'all') return data;
+        return data.filter(item => {
+            if (period === 'peak') {
+                return item.peak_hours.includes('9AM') || item.peak_hours.includes('6PM');
+            }
+            return !item.peak_hours.includes('9AM') && !item.peak_hours.includes('6PM');
+        });
+    }
+
+    function updateOverviewMetrics(data) {
+        // Update the overview cards with new metrics
+        const avgSpeed = calculateAverageSpeed(data);
+        const avgCongestion = calculateAverageCongestion(data);
+        const mostCongested = findMostCongestedArea(data);
+        
+        document.querySelector('.meter-fill').style.width = `${avgCongestion}%`;
+        document.querySelector('.congestion-value').textContent = `${avgCongestion}%`;
+        document.querySelector('.highlight-value').textContent = `${avgSpeed} km/h`;
+    }
+
+    function calculateAverageSpeed(data) {
+        return Math.round(data.reduce((sum, item) => sum + item.average_speed, 0) / data.length);
+    }
+
+    function calculateAverageCongestion(data) {
+        return Math.round(data.reduce((sum, item) => sum + getCongestionLevel(item), 0) / data.length);
+    }
+
+    function findMostCongestedArea(data) {
+        return data.reduce((max, item) => {
+            const congestion = getCongestionLevel(item);
+            return congestion > max.congestion ? { name: item.road_name, congestion } : max;
+        }, { name: '', congestion: 0 });
+    }
+
+    function getCongestionLevel(item) {
+        const baseCongestion = getBaseCongestion(item.road_type);
+        const trafficLightImpact = item.traffic_lights_count * 5;
+        return Math.min(100, Math.round(50 * baseCongestion + trafficLightImpact));
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,176 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Traffic Management - Admin Panel{% endblock %}
+
+{% block page_title %}Traffic Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Actions Bar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addTrafficModal" title="Add new traffic record">
+                                <i class="fas fa-plus me-2"></i>Add Traffic Record
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#importModal" title="Import traffic data">
+                                <i class="fas fa-file-import me-2"></i>Import Data
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#exportModal" title="Export traffic data">
+                                <i class="fas fa-file-export me-2"></i>Export Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Traffic Data Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="card-title mb-0">Traffic Data</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchTraffic" placeholder="Search traffic data..." title="Search traffic data">
+                        <button class="btn btn-outline-secondary" type="button" title="Search">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Station</th>
+                            <th>Date</th>
+                            <th>Hour</th>
+                            <th>Passenger Count</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in traffic_data %}
+                        <tr>
+                            <td>{{ record.station.name }}</td>
+                            <td>{{ record.date|date:"Y-m-d" }}</td>
+                            <td>{{ record.hour }}:00</td>
+                            <td>{{ record.passenger_count }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-warning" onclick="editTraffic({{ record.id }})" title="Edit traffic record">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteTraffic({{ record.id }})" title="Delete traffic record">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No traffic data found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Traffic Modal -->
+<div class="modal fade" id="addTrafficModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Traffic Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTrafficForm" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add">
+                    <div class="mb-3">
+                        <label for="station" class="form-label">Station</label>
+                        <select class="form-select" id="station" name="station" required title="Select station">
+                            {% for station in stations %}
+                            <option value="{{ station.id }}">{{ station.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" name="date" required title="Select date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="hour" class="form-label">Hour</label>
+                        <select class="form-select" id="hour" name="hour" required title="Select hour">
+                            {% for hour in ""|rjust:"24" %}
+                            <option value="{{ forloop.counter0 }}">{{ forloop.counter0 }}:00</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="passengerCount" class="form-label">Passenger Count</label>
+                        <input type="number" class="form-control" id="passengerCount" name="passenger_count" required title="Enter passenger count">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Cancel">Cancel</button>
+                <button type="submit" form="addTrafficForm" class="btn btn-primary" title="Save traffic record">Save Record</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Traffic Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this traffic record? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <form method="POST" id="deleteForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="traffic_id" id="deleteTrafficId">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Cancel">Cancel</button>
+                    <button type="submit" class="btn btn-danger" title="Delete record">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteTraffic(trafficId) {
+    document.getElementById('deleteTrafficId').value = trafficId;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function editTraffic(trafficId) {
+    // Implement edit traffic record
+    window.location.href = `/admin_panel/data/traffic/${trafficId}/edit/`;
+}
+</script>
+{% endblock %} 

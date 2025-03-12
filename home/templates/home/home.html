@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Tanzania Transport Analysis{% endblock %}
+{% block content %}
+<div class="hero-section text-center py-5">
+    <div class="container">
+        <h1 class="display-4 mb-4">Welcome to Tanzania Transport Analysis</h1>
+        <p class="lead mb-5">Optimize your transportation decisions with data-driven insights</p>
+        {% if not user.is_authenticated %}
+            <a href="{% url 'admin:login' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-sign-in-alt me-2"></i>Get Started
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-4">
+        <!-- Dashboard Card -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                    <h3 class="card-title">Analytics Dashboard</h3>
+                    <p class="card-text">View comprehensive transportation metrics and insights</p>
+                    <a href="{% url 'dashboard:dashboard' %}" class="btn btn-outline-primary">
+                        View Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Explorer Card -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-search fa-3x text-success mb-3"></i>
+                    <h3 class="card-title">Data Explorer</h3>
+                    <p class="card-text">Analyze transportation patterns and trends</p>
+                    <a href="{% url 'explorer:index' %}" class="btn btn-outline-success">
+                        Explore Data
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Card -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-alt fa-3x text-info mb-3"></i>
+                    <h3 class="card-title">Reports</h3>
+                    <p class="card-text">Generate and view detailed transportation reports</p>
+                    <a href="{% url 'reports:index' %}" class="btn btn-outline-info">
+                        View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2 class="mb-4">Optimize Your Transportation</h2>
+                <p class="lead">Make data-driven decisions to improve transportation efficiency in Tanzania.</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check-circle text-success me-2"></i>Real-time analytics</li>
+                    <li><i class="fas fa-check-circle text-success me-2"></i>Cost optimization</li>
+                    <li><i class="fas fa-check-circle text-success me-2"></i>Route planning</li>
+                    <li><i class="fas fa-check-circle text-success me-2"></i>Traffic analysis</li>
+                </ul>
+            </div>
+            <div class="col-md-6 text-center">
+                <i class="fas fa-bus fa-10x text-primary opacity-50"></i>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

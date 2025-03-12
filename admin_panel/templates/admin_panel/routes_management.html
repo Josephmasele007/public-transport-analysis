@@ -1,0 +1,190 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Routes Management - Admin Panel{% endblock %}
+
+{% block page_title %}Routes Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Actions Bar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addRouteModal" title="Add new route">
+                                <i class="fas fa-plus me-2"></i>Add Route
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#importModal" title="Import routes data">
+                                <i class="fas fa-file-import me-2"></i>Import Data
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#exportModal" title="Export routes data">
+                                <i class="fas fa-file-export me-2"></i>Export Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Routes Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="card-title mb-0">Routes</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchRoute" placeholder="Search routes..." title="Search routes">
+                        <button class="btn btn-outline-secondary" type="button" title="Search">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Distance (km)</th>
+                            <th>Estimated Time</th>
+                            <th>Fare (TZS)</th>
+                            <th>Stations</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for route in routes %}
+                        <tr>
+                            <td>{{ route.name }}</td>
+                            <td>{{ route.distance }}</td>
+                            <td>{{ route.estimated_time }} min</td>
+                            <td>{{ route.fare }}</td>
+                            <td>{{ route.stations.count }}</td>
+                            <td>
+                                <span class="badge {% if route.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if route.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-info" onclick="viewRoute({{ route.id }})" title="View route details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="editRoute({{ route.id }})" title="Edit route">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteRoute({{ route.id }})" title="Delete route">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No routes found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Route Modal -->
+<div class="modal fade" id="addRouteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Route</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addRouteForm" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add">
+                    <div class="mb-3">
+                        <label for="routeName" class="form-label">Route Name</label>
+                        <input type="text" class="form-control" id="routeName" name="name" required title="Enter route name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="distance" class="form-label">Distance (km)</label>
+                        <input type="number" step="0.1" class="form-control" id="distance" name="distance" required title="Enter route distance">
+                    </div>
+                    <div class="mb-3">
+                        <label for="estimatedTime" class="form-label">Estimated Time (minutes)</label>
+                        <input type="number" class="form-control" id="estimatedTime" name="estimated_time" required title="Enter estimated time">
+                    </div>
+                    <div class="mb-3">
+                        <label for="fare" class="form-label">Fare (TZS)</label>
+                        <input type="number" class="form-control" id="fare" name="fare" required title="Enter fare amount">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="isActive" name="is_active" checked title="Set route status">
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Cancel">Cancel</button>
+                <button type="submit" form="addRouteForm" class="btn btn-primary" title="Save route">Save Route</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Route</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this route? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <form method="POST" id="deleteForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="route_id" id="deleteRouteId">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Cancel">Cancel</button>
+                    <button type="submit" class="btn btn-danger" title="Delete route">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteRoute(routeId) {
+    document.getElementById('deleteRouteId').value = routeId;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function viewRoute(routeId) {
+    // Implement view route details
+    window.location.href = `/admin_panel/data/routes/${routeId}/`;
+}
+
+function editRoute(routeId) {
+    // Implement edit route
+    window.location.href = `/admin_panel/data/routes/${routeId}/edit/`;
+}
+</script>
+{% endblock %} 

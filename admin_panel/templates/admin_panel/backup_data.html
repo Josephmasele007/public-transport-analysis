@@ -1,0 +1,113 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Backup Data - Admin Panel{% endblock %}
+
+{% block page_title %}Backup Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Backup Files</h5>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a href="?path=">Root</a></li>{% for part in current_path_parts %}<li class="breadcrumb-item"><a href="?path={{ part.path }}">{{ part.name }}</a></li>{% endfor %}</ol>
+        </nav>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <form method="post" class="d-inline-block me-2">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_backup">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Create Backup
+                </button>
+            </form>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newFolderModal">
+                <i class="fas fa-folder-plus me-2"></i>New Folder
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Modified</th>
+                        <th>Size</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if current_path %}
+                    <tr>
+                        <td colspan="5">
+                            <a href="?path={{ parent_path }}" class="text-decoration-none">
+                                <i class="fas fa-level-up-alt me-2"></i>Up one level
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            {% if item.is_dir %}
+                            <a href="?path={{ item.full_path }}" class="text-decoration-none">
+                                <i class="fas fa-folder me-2 text-warning"></i>{{ item.name }}
+                            </a>
+                            {% else %}
+                            <i class="fas fa-file me-2 text-primary"></i>{{ item.name }}
+                            {% endif %}
+                        </td>
+                        <td>{{ item.type }}</td>
+                        <td>{{ item.modified|date:"Y-m-d H:i:s" }}</td>
+                        <td>{{ item.size|filesizeformat }}</td>
+                        <td>
+                            <form method="post" class="d-inline-block">
+                                {% csrf_token %}
+                                {% if item.is_dir %}
+                                <input type="hidden" name="action" value="delete_folder">
+                                <input type="hidden" name="folder_path" value="{{ item.full_path }}">
+                                {% else %}
+                                <input type="hidden" name="action" value="delete_backup">
+                                <input type="hidden" name="file_path" value="{{ item.full_path }}">
+                                {% endif %}
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- New Folder Modal -->
+<div class="modal fade" id="newFolderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_folder">
+                <input type="hidden" name="current_path" value="{{ current_path }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Folder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="folder_name" class="form-label">Folder Name</label>
+                        <input type="text" class="form-control" id="folder_name" name="folder_name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

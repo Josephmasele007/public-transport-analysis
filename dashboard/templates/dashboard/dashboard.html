@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Tanzania Transport Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #4666d1;
+        --secondary-color: #45a049;
+        --accent-color: #2196F3;
+        --background-color: #f8f9fa;
+        --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+        background-color: var(--background-color);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .navbar {
+        box-shadow: var(--card-shadow);
+    }
+
+    .navbar-brand {
+        font-weight: 600;
+        color: var(--primary-color) !important;
+    }
+
+    .card {
+        transition: transform 0.3s, box-shadow 0.3s;
+        border: none;
+        border-radius: 10px;
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .stats-card {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+    }
+
+    .stats-card .card-title {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.9;
+    }
+
+    .stats-card h2 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 10px 0;
+    }
+
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.3;
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+    }
+
+    .table {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .table thead th {
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        padding: 15px;
+        border: none;
+    }
+
+    .badge-custom {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background-color: rgba(76, 175, 80, 0.1);
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'dashboard:dashboard' %}">
+            <i class="fas fa-chart-line me-2"></i>Transportation Dashboard
+        </a>
+        <div class="d-flex align-items-center">
+            {% if user.is_superuser %}
+            <a href="{% url 'admin_panel:home' %}" class="btn btn-primary">
+                <i class="fas fa-cog me-2"></i>Admin Panel
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body position-relative">
+                    <h5 class="card-title">Total Routes</h5>
+                    <h2>{{ total_routes }}</h2>
+                    <i class="fas fa-route stats-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body position-relative">
+                    <h5 class="card-title">Total Stations</h5>
+                    <h2>{{ total_stations }}</h2>
+                    <i class="fas fa-building stats-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body position-relative">
+                    <h5 class="card-title">Average Fare</h5>
+                    <h2>TZS {{ avg_fare|floatformat:0 }}</h2>
+                    <i class="fas fa-money-bill-wave stats-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body position-relative">
+                    <h5 class="card-title">Avg Travel Time</h5>
+                    <h2>{{ avg_travel_time|floatformat:0 }} min</h2>
+                    <i class="fas fa-clock stats-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Route Distribution by Road Type</h5>
+                </div>
+                <div class="card-body">
+                    <div id="roadTypeChart"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Average Fare by Distance</h5>
+                </div>
+                <div class="card-body">
+                    <div id="fareDistanceChart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Table -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Transportation Routes</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label for="road_type" class="form-label">Road Type</label>
+                    <select name="road_type" id="road_type" class="form-select">
+                        <option value="">All Road Types</option>
+                        {% for road_type in road_types %}
+                        <option value="{{ road_type }}" {% if selected_road_type == road_type %}selected{% endif %}>
+                            {{ road_type }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               placeholder="Search routes..." value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Road Name</th>
+                            <th>Route Name</th>
+                            <th>Bus Station</th>
+                            <th>BRT Station</th>
+                            <th>Distance (km)</th>
+                            <th>Peak Hours</th>
+                            <th>Fare (TZS)</th>
+                            <th>Road Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if routes %}
+                            {% for route in routes %}
+                            <tr>
+                                <td>{{ route.road_name }}</td>
+                                <td>{{ route.route_name }}</td>
+                                <td>{{ route.bus_station }}</td>
+                                <td>{{ route.brt_station }}</td>
+                                <td>{{ route.road_distance }}</td>
+                                <td>
+                                    <span class="badge badge-custom badge-success">
+                                        {{ route.peak_hours }}
+                                    </span>
+                                </td>
+                                <td>{{ route.fare }}</td>
+                                <td>
+                                    <span class="badge badge-custom badge-success">
+                                        {{ route.road_type }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center">No routes found</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if routes.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if routes.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1&road_type={{ selected_road_type }}&search={{ search_query }}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ routes.previous_page_number }}&road_type={{ selected_road_type }}&search={{ search_query }}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in routes.paginator.page_range %}
+                        {% if routes.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > routes.number|add:'-3' and num < routes.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}&road_type={{ selected_road_type }}&search={{ search_query }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if routes.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ routes.next_page_number }}&road_type={{ selected_road_type }}&search={{ search_query }}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ routes.paginator.num_pages }}&road_type={{ selected_road_type }}&search={{ search_query }}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Hidden elements for chart data -->
+<script type="application/json" id="road-type-data">
+    {{ road_type_data|safe }}
+</script>
+<script type="application/json" id="road-type-labels">
+    {{ road_type_labels|safe }}
+</script>
+<script type="application/json" id="fare-distance-series">
+    {{ fare_distance_series|safe }}
+</script>
+<script type="application/json" id="distance-categories">
+    {{ distance_categories|safe }}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.35.0/dist/apexcharts.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get data from hidden inputs
+        const dashboardData = {
+            roadTypeData: JSON.parse(document.getElementById('road-type-data').textContent),
+            roadTypeLabels: JSON.parse(document.getElementById('road-type-labels').textContent),
+            fareDistanceSeries: JSON.parse(document.getElementById('fare-distance-series').textContent),
+            distanceCategories: JSON.parse(document.getElementById('distance-categories').textContent)
+        };
+
+        // Road Type Distribution Chart
+        const roadTypeOptions = {
+            series: dashboardData.roadTypeData,
+            chart: {
+                type: 'pie',
+                height: 350,
+                fontFamily: 'Segoe UI, sans-serif'
+            },
+            labels: dashboardData.roadTypeLabels,
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    chart: {
+                        width: 200
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }],
+            colors: ['#4666d1', '#45a049', '#2196F3', '#FFC107', '#FF5722'],
+            tooltip: {
+                y: {
+                    formatter: function(value) {
+                        return value + ' routes';
+                    }
+                }
+            },
+            legend: {
+                position: 'bottom',
+                horizontalAlign: 'center'
+            }
+        };
+
+        // Fare vs Distance Chart
+        const fareDistanceOptions = {
+            series: dashboardData.fareDistanceSeries,
+            chart: {
+                height: 350,
+                type: 'line',
+                fontFamily: 'Segoe UI, sans-serif',
+                toolbar: {
+                    show: true,
+                    tools: {
+                        download: true,
+                        selection: true,
+                        zoom: true,
+                        zoomin: true,
+                        zoomout: true,
+                        pan: true,
+                        reset: true
+                    }
+                },
+                zoom: {
+                    enabled: true
+                }
+            },
+            stroke: {
+                curve: 'smooth',
+                width: 3
+            },
+            xaxis: {
+                categories: dashboardData.distanceCategories,
+                title: {
+                    text: 'Distance (km)',
+                    style: {
+                        fontSize: '14px',
+                        fontWeight: 600
+                    }
+                },
+                labels: {
+                    formatter: function(value) {
+                        return parseFloat(value).toFixed(1) + ' km';
+                    }
+                },
+                tickAmount: 10
+            },
+            yaxis: {
+                title: {
+                    text: 'Fare (TZS)',
+                    style: {
+                        fontSize: '14px',
+                        fontWeight: 600
+                    }
+                },
+                labels: {
+                    formatter: function(value) {
+                        return 'TZS ' + value.toLocaleString();
+                    }
+                }
+            },
+            colors: ['#4666d1'],
+            markers: {
+                size: 6,
+                strokeWidth: 3,
+                strokeColors: '#fff',
+                hover: {
+                    size: 8
+                }
+            },
+            tooltip: {
+                shared: true,
+                intersect: false,
+                y: {
+                    formatter: function(value) {
+                        return 'TZS ' + value.toLocaleString();
+                    }
+                },
+                x: {
+                    formatter: function(value) {
+                        return parseFloat(value).toFixed(1) + ' km';
+                    }
+                }
+            },
+            grid: {
+                borderColor: '#e0e0e0',
+                strokeDashArray: 5,
+                xaxis: {
+                    lines: {
+                        show: true
+                    }
+                },
+                yaxis: {
+                    lines: {
+                        show: true
+                    }
+                }
+            },
+            dataLabels: {
+                enabled: false
+            }
+        };
+
+        // Render charts
+        new ApexCharts(document.querySelector("#roadTypeChart"), roadTypeOptions).render();
+        new ApexCharts(document.querySelector("#fareDistanceChart"), fareDistanceOptions).render();
+    });
+</script>
+{% endblock %}

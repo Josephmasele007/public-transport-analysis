@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Stations - Tanzania Transport Analysis{% endblock %}
+
+{% block extra_css %}
+// ... existing code ...
+{% endblock %}
+
+{% block content %}
+// ... existing code ...
+
+<!-- Hidden elements for chart data -->
+<script type="application/json" id="hourlyTrafficData">
+    {{ hourly_traffic|safe }}
+</script>
+<script type="application/json" id="busiestStationsData">
+    {{ busiest_stations|safe }}
+</script>
+<script type="application/json" id="stationsData">
+    {{ stations|safe }}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse JSON data from hidden elements
+    const hourlyTrafficData = JSON.parse(document.getElementById('hourlyTrafficData').textContent);
+    const busiestStationsData = JSON.parse(document.getElementById('busiestStationsData').textContent);
+    const stationsData = JSON.parse(document.getElementById('stationsData').textContent);
+
+    // Initialize traffic chart
+    const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+    new Chart(trafficCtx, {
+        type: 'line',
+        data: {
+            labels: hourlyTrafficData.map(h => `${h.hour}:00`),
+            datasets: [{
+                label: 'Passenger Count',
+                data: hourlyTrafficData.map(h => h.total_passengers),
+                borderColor: '#2196F3',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Passenger Count'
+                    }
+                }
+            }
+        }
+    });
+
+    // Initialize stations chart
+    const stationsCtx = document.getElementById('stationsChart').getContext('2d');
+    new Chart(stationsCtx, {
+        type: 'bar',
+        data: {
+            labels: busiestStationsData.map(s => s.station__name),
+            datasets: [{
+                label: 'Passengers Today',
+                data: busiestStationsData.map(s => s.total_passengers),
+                backgroundColor: '#4CAF50'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Passenger Count'
+                    }
+                }
+            }
+        }
+    });
+
+    // Initialize map
+    const map = L.map('map').setView([-6.8235, 39.2695], 12);  // Dar es Salaam coordinates
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Add station markers
+    stationsData.forEach(station => {
+        if (station.coordinates && station.coordinates.lat && station.coordinates.lng) {
+            const marker = L.marker([station.coordinates.lat, station.coordinates.lng])
+                .bindPopup(`
+                    <strong>${station.name}</strong><br>
+                    Type: ${station.station_type}<br>
+                    Today's Traffic: ${station.today_traffic} passengers
+                `);
+            marker.addTo(map);
+        }
+    });
+
+    // Filter functionality
+    const stationSearch = document.getElementById('stationSearch');
+    const typeFilter = document.getElementById('typeFilter');
+    const routeFilter = document.getElementById('routeFilter');
+    const statusFilter = document.getElementById('statusFilter');
+
+    function filterStations() {
+        const searchTerm = stationSearch.value.toLowerCase();
+        const type = typeFilter.value;
+        const route = routeFilter.value;
+        const status = statusFilter.value;
+
+        document.querySelectorAll('.station-card').forEach(card => {
+            const stationType = card.dataset.stationType;
+            const isOperational = card.dataset.operational === 'true';
+            const text = card.textContent.toLowerCase();
+
+            const matchesSearch = text.includes(searchTerm);
+            const matchesType = type === 'all' || stationType === type;
+            const matchesStatus = status === 'all' || 
+                (status === 'operational' && isOperational) ||
+                (status === 'non-operational' && !isOperational);
+
+            card.style.display = matchesSearch && matchesType && matchesStatus ? 'block' : 'none';
+        });
+    }
+
+    [stationSearch, typeFilter, routeFilter, statusFilter].forEach(element => {
+        element.addEventListener('change', filterStations);
+    });
+    stationSearch.addEventListener('input', filterStations);
+});
+</script>
+{% endblock %} 
