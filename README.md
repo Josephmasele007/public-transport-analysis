@@ -50,3 +50,7 @@ This project aims to optimize public transportation systems in Dar es Salaam, Ta
 1. Clone the repository:
    ```bash
    git clone https://github.com/Josephmasele007/public-transport-analysis.git
+
+## Contact
+- Email: josephmasele1307@gmail.com
+- GitHub: Josephmasele007
