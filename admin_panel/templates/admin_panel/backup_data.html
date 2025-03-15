@@ -21,7 +21,7 @@
                     <i class="fas fa-save me-2"></i>Create Backup
                 </button>
             </form>
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newFolderModal">
+            <button type="button" class="btn btn-success" onclick="showNewFolderModal()">
                 <i class="fas fa-folder-plus me-2"></i>New Folder
             </button>
         </div>
@@ -85,29 +85,183 @@
 </div>
 
 <!-- New Folder Modal -->
-<div class="modal fade" id="newFolderModal" tabindex="-1">
+<div class="modal fade" id="newFolderModal" tabindex="-1" aria-labelledby="newFolderModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="create_folder">
-                <input type="hidden" name="current_path" value="{{ current_path }}">
-                <div class="modal-header">
-                    <h5 class="modal-title">Create New Folder</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newFolderModalLabel">Create New Folder</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newFolderForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_folder">
+                    <input type="hidden" name="current_path" value="{{ current_path }}">
                     <div class="mb-3">
                         <label for="folder_name" class="form-label">Folder Name</label>
                         <input type="text" class="form-control" id="folder_name" name="folder_name" required>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create</button>
-                </div>
-            </form>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createNewFolder()">Create</button>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Load jQuery first -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Then load Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Custom CSS for modal fixes -->
+<style>
+    .modal {
+        z-index: 1050;
+    }
+    .modal-backdrop {
+        z-index: 1040;
+    }
+    body.modal-open {
+        padding-right: 0 !important;
+    }
+    .modal-dialog {
+        margin: 1.75rem auto;
+    }
+    .modal-content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        pointer-events: auto;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid rgba(0,0,0,.2);
+        border-radius: 0.3rem;
+        outline: 0;
+    }
+</style>
+
+<script>
+// Initialize modal globally
+let newFolderModal;
+
+// Function to force close all modals
+function forceCloseAllModals() {
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.paddingRight = '';
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.style.display = 'none';
+    });
+}
+
+// Function to initialize modals
+function initializeModals() {
+    forceCloseAllModals();
+
+    newFolderModal = new bootstrap.Modal(document.getElementById('newFolderModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    // Add event listeners for modal close buttons
+    document.querySelectorAll('.btn-close, [data-bs-dismiss="modal"]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modalId = this.closest('.modal').id;
+            const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+            if (modal) {
+                modal.hide();
+            } else {
+                const modalElement = document.getElementById(modalId);
+                if (modalElement) {
+                    modalElement.style.display = 'none';
+                    forceCloseAllModals();
+                }
+            }
+        });
+    });
+
+    // Add event listeners for modal hidden event
+    document.querySelectorAll('.modal').forEach(modalElement => {
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            forceCloseAllModals();
+        });
+    });
+
+    // Add event listeners for modal show event
+    document.querySelectorAll('.modal').forEach(modalElement => {
+        modalElement.addEventListener('show.bs.modal', function () {
+            forceCloseAllModals();
+        });
+    });
+}
+
+// Initialize everything when the document is ready
+$(document).ready(function() {
+    initializeModals();
+
+    $(document).keydown(function(e) {
+        if (e.keyCode === 27) {
+            forceCloseAllModals();
+        }
+    });
+});
+
+// Function to show modal with error handling
+function showModal(modal) {
+    try {
+        if (modal) {
+            forceCloseAllModals();
+            modal.show();
+        }
+    } catch (error) {
+        console.error('Error showing modal:', error);
+        forceCloseAllModals();
+    }
+}
+
+// Function to show new folder modal
+function showNewFolderModal() {
+    showModal(newFolderModal);
+}
+
+// Function to create new folder
+function createNewFolder() {
+    const form = document.getElementById('newFolderForm');
+    const formData = new FormData(form);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text();
+    })
+    .then(() => {
+        // Close the modal
+        if (newFolderModal) {
+            newFolderModal.hide();
+        }
+        // Reload the page to show the new folder
+        window.location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating folder: ' + error.message);
+    });
+}
+</script>
 {% endblock %} 

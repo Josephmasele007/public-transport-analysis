@@ -4,604 +4,261 @@
 {% block title %}Stations - Tanzania Transport Analysis{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <style>
 .stations-container {
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
 }
 
-.subtitle {
-    color: #666;
-    margin-bottom: 2rem;
-}
-
-.overview-section {
-    margin-bottom: 2rem;
-}
-
-.overview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-}
-
-.overview-card {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.page-header {
     text-align: center;
-}
-
-.highlight-value {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #007bff;
-    margin-top: 0.5rem;
-}
-
-.search-filters-section {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     margin-bottom: 2rem;
 }
 
-.search-box {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.search-box input {
-    flex: 1;
-    padding: 0.8rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-}
-
-.search-btn {
-    padding: 0.8rem 1.5rem;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-.search-btn:hover {
-    background: #0056b3;
-}
-
-.filters {
-    display: flex;
-    gap: 1rem;
-}
-
-.filters select {
-    padding: 0.8rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-}
-
-.map-section {
-    margin: 2rem 0;
-}
-
-.map-container {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.station-map {
-    height: 400px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-}
-
-.map-legend {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.legend-color {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-}
-
-.legend-color.bus { background: #4CAF50; }
-.legend-color.brt { background: #2196F3; }
-.legend-color.both { background: #9C27B0; }
-
-.stations-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 1.5rem;
-}
-
-.station-card {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.station-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.station-type-badge {
-    padding: 0.3rem 0.8rem;
-    border-radius: 15px;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.station-type-badge.bus { background: #E8F5E9; color: #2E7D32; }
-.station-type-badge.brt { background: #E3F2FD; color: #1565C0; }
-.station-type-badge.both { background: #F3E5F5; color: #6A1B9A; }
-
-.station-details {
-    display: grid;
-    gap: 0.8rem;
-    margin-bottom: 1rem;
-}
-
-.detail-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-}
-
-.detail-group span {
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.detail-group p {
-    font-weight: 500;
-    color: #333;
-}
-
-.station-metrics {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.metric {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-}
-
-.metric span {
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.metric p {
-    font-weight: 600;
-    color: #333;
-}
-
-.station-chart {
-    height: 150px;
-    margin-top: 1rem;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.stat-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    text-align: center;
-}
-
-.stat-card h3 {
-    color: #666;
-    font-size: 1rem;
+.page-title {
+    font-size: 2.5rem;
+    color: #2c3e50;
     margin-bottom: 0.5rem;
 }
 
-.stat-value {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #2196F3;
+.subtitle {
+    color: #666;
+    font-size: 1.1rem;
 }
 
-.charts-grid {
+.stations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.chart-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.chart-card h3 {
-    margin-bottom: 1rem;
-    color: #333;
-}
-
-#map {
-    height: 400px;
-    border-radius: 10px;
-    margin-bottom: 2rem;
-}
-
-.station-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
 }
 
 .station-card {
     background: white;
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    overflow: hidden;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
 }
 
-.station-header {
-    padding: 1rem;
-    background: #f8f9fa;
-    border-bottom: 1px solid #eee;
+.station-card:hover {
+    transform: translateY(-5px);
 }
 
-.station-header h4 {
-    margin: 0;
-    color: #333;
+.station-name {
+    font-size: 1.25rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
 }
 
 .station-type {
     display: inline-block;
     padding: 0.25rem 0.75rem;
+    background: #e9ecef;
     border-radius: 15px;
     font-size: 0.875rem;
-    margin-left: 0.5rem;
-}
-
-.station-type.bus { background: #E8F5E9; color: #2E7D32; }
-.station-type.brt { background: #E3F2FD; color: #1565C0; }
-.station-type.both { background: #F3E5F5; color: #6A1B9A; }
-
-.station-body {
-    padding: 1rem;
-}
-
-.station-info {
+    color: #495057;
     margin-bottom: 1rem;
 }
 
-.info-item {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
+.station-details {
+    margin-bottom: 1rem;
 }
 
-.info-label {
+.station-detail-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
     color: #666;
 }
 
-.info-value {
+.station-detail-item i {
+    width: 20px;
+    margin-right: 0.5rem;
+    color: #007bff;
+}
+
+.station-status {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.875rem;
     font-weight: 500;
 }
 
-.station-routes {
-    background: #f8f9fa;
-    padding: 1rem;
+.status-operational {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-non-operational {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.search-box {
+    margin-bottom: 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
     border-radius: 5px;
+    font-size: 1rem;
 }
 
-.route-item {
+.filter-section {
+    margin-bottom: 2rem;
     display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #eee;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
-.route-item:last-child {
-    border-bottom: none;
+.filter-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.filter-btn:hover {
+    background: #f8f9fa;
+    color: #007bff;
+    border-color: #007bff;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.no-stations {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-size: 1.1rem;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <h1 class="mb-4">Station Management Dashboard</h1>
-
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <h3>Total Stations</h3>
-            <div class="stat-value">{{ total_stations }}</div>
-        </div>
-        <div class="stat-card">
-            <h3>BRT Stations</h3>
-            <div class="stat-value">{{ brt_stations_count }}</div>
-        </div>
-        <div class="stat-card">
-            <h3>Bus Stations</h3>
-            <div class="stat-value">{{ bus_stations_count }}</div>
-        </div>
-        <div class="stat-card">
-            <h3>Combined Stations</h3>
-            <div class="stat-value">{{ both_stations_count }}</div>
-        </div>
+<div class="stations-container">
+    <div class="page-header">
+        <h1 class="page-title">Transport Stations</h1>
+        <p class="subtitle">Find information about transport stations across Tanzania</p>
     </div>
 
-    <!-- Charts Section -->
-    <div class="charts-grid">
-        <div class="chart-card">
-            <h3>Today's Hourly Traffic</h3>
-            <canvas id="trafficChart"></canvas>
-        </div>
-        <div class="chart-card">
-            <h3>Busiest Stations Today</h3>
-            <canvas id="stationsChart"></canvas>
-        </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search stations by name or location...">
     </div>
 
-    <!-- Map Section -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h3 class="card-title mb-3">Station Locations</h3>
-            <div id="map"></div>
-        </div>
+    <div class="filter-section">
+        <button class="filter-btn active" data-filter="all">All Stations</button>
+        <button class="filter-btn" data-filter="bus">Bus Stations</button>
+        <button class="filter-btn" data-filter="brt">BRT Stations</button>
+        <button class="filter-btn" data-filter="operational">Operational</button>
+        <button class="filter-btn" data-filter="non-operational">Non-Operational</button>
     </div>
 
-    <!-- Filters -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <input type="text" class="form-control" id="stationSearch" placeholder="Search stations...">
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="typeFilter" title="Filter stations by type">
-                        <option value="all">All Types</option>
-                        <option value="bus">Bus Stations</option>
-                        <option value="brt">BRT Stations</option>
-                        <option value="both">Combined Stations</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="routeFilter" title="Filter stations by route">
-                        <option value="all">All Routes</option>
-                        {% for route in routes %}
-                        <option value="{{ route.id }}">{{ route.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" id="statusFilter" title="Filter stations by operational status">
-                        <option value="all">All Status</option>
-                        <option value="operational">Operational</option>
-                        <option value="non-operational">Non-operational</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stations List -->
-    <div class="station-list">
+    <div class="stations-grid">
         {% for station in stations %}
-        <div class="station-card" data-station-type="{{ station.station_type }}" data-operational="{{ station.is_operational }}">
-            <div class="station-header">
-                <h4>
-                    {{ station.name }}
-                    <span class="station-type {{ station.station_type }}">
-                        {{ station.get_station_type_display }}
-                    </span>
-                </h4>
-            </div>
-            <div class="station-body">
-                <div class="station-info">
-                    <div class="info-item">
-                        <span class="info-label">Location:</span>
-                        <span class="info-value">{{ station.location }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Landmark:</span>
-                        <span class="info-value">{{ station.landmark_nearby|default:"N/A" }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Operating Hours:</span>
-                        <span class="info-value">{{ station.opening_time|time:"H:i" }} - {{ station.closing_time|time:"H:i" }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Today's Traffic:</span>
-                        <span class="info-value">{{ station.today_traffic }} passengers</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Status:</span>
-                        <span class="info-value {% if station.is_operational %}text-success{% else %}text-danger{% endif %}">
-                            {{ station.is_operational|yesno:"Operational,Non-operational" }}
-                        </span>
-                    </div>
+        <div class="station-card" data-type="{{ station.station_type }}" data-status="{{ station.is_operational|yesno:'operational,non-operational' }}">
+            <h2 class="station-name">{{ station.name }}</h2>
+            <span class="station-type">{{ station.get_station_type_display }}</span>
+            
+            <div class="station-details">
+                <div class="station-detail-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ station.location }}</span>
                 </div>
-                <div class="station-routes">
-                    <h5 class="mb-3">Routes</h5>
-                    {% for route in station.routes %}
-                    <div class="route-item">
-                        <span>{{ route.name }}</span>
-                        <span>TZS {{ route.fare }}</span>
-                    </div>
-                    {% empty %}
-                    <p class="text-muted">No routes assigned</p>
-                    {% endfor %}
+                <div class="station-detail-item">
+                    <i class="fas fa-users"></i>
+                    <span>Capacity: {{ station.capacity }}</span>
+                </div>
+                <div class="station-detail-item">
+                    <i class="fas fa-clock"></i>
+                    <span>{{ station.opening_time|time:"H:i" }} - {{ station.closing_time|time:"H:i" }}</span>
                 </div>
             </div>
+
+            <span class="station-status {% if station.is_operational %}status-operational{% else %}status-non-operational{% endif %}">
+                {% if station.is_operational %}Operational{% else %}Non-Operational{% endif %}
+            </span>
+        </div>
+        {% empty %}
+        <div class="no-stations">
+            No stations found. Please try different search criteria.
         </div>
         {% endfor %}
     </div>
 </div>
-
-<!-- Hidden data elements -->
-<script type="application/json" id="hourlyTrafficData">{{ hourly_traffic|safe }}</script>
-<script type="application/json" id="busiestStationsData">{{ busiest_stations|safe }}</script>
-<script type="application/json" id="stationsData">{{ stations|safe }}</script>
-
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Parse JSON data
-    const hourlyTrafficData = JSON.parse(document.getElementById('hourlyTrafficData').textContent);
-    const busiestStationsData = JSON.parse(document.getElementById('busiestStationsData').textContent);
-    const stationsData = JSON.parse(document.getElementById('stationsData').textContent);
+    const searchInput = document.getElementById('searchInput');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const stationCards = document.querySelectorAll('.station-card');
 
-    // Initialize traffic chart
-    const trafficCtx = document.getElementById('trafficChart').getContext('2d');
-    new Chart(trafficCtx, {
-        type: 'line',
-        data: {
-            labels: hourlyTrafficData.map(h => `${h.hour}:00`),
-            datasets: [{
-                label: 'Passenger Count',
-                data: hourlyTrafficData.map(h => h.total_passengers),
-                borderColor: '#2196F3',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Passenger Count'
-                    }
-                }
-            }
-        }
-    });
-
-    // Initialize stations chart
-    const stationsCtx = document.getElementById('stationsChart').getContext('2d');
-    new Chart(stationsCtx, {
-        type: 'bar',
-        data: {
-            labels: busiestStationsData.map(s => s.station__name),
-            datasets: [{
-                label: 'Passengers Today',
-                data: busiestStationsData.map(s => s.total_passengers),
-                backgroundColor: '#4CAF50'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Passenger Count'
-                    }
-                }
-            }
-        }
-    });
-
-    // Initialize map
-    const map = L.map('map').setView([-6.8235, 39.2695], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Add station markers
-    stationsData.forEach(station => {
-        if (station.coordinates && station.coordinates.lat && station.coordinates.lng) {
-            L.marker([station.coordinates.lat, station.coordinates.lng])
-                .bindPopup(`
-                    <strong>${station.name}</strong><br>
-                    Type: ${station.station_type}<br>
-                    Today's Traffic: ${station.today_traffic} passengers
-                `)
-                .addTo(map);
-        }
+    // Search functionality
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        filterStations(searchTerm);
     });
 
     // Filter functionality
-    const stationSearch = document.getElementById('stationSearch');
-    const typeFilter = document.getElementById('typeFilter');
-    const routeFilter = document.getElementById('routeFilter');
-    const statusFilter = document.getElementById('statusFilter');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active state
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
 
-    function filterStations() {
-        const searchTerm = stationSearch.value.toLowerCase();
-        const type = typeFilter.value;
-        const route = routeFilter.value;
-        const status = statusFilter.value;
-
-        document.querySelectorAll('.station-card').forEach(card => {
-            const stationType = card.dataset.stationType;
-            const isOperational = card.dataset.operational === 'true';
-            const text = card.textContent.toLowerCase();
-
-            const matchesSearch = text.includes(searchTerm);
-            const matchesType = type === 'all' || stationType === type;
-            const matchesStatus = status === 'all' || 
-                (status === 'operational' && isOperational) ||
-                (status === 'non-operational' && !isOperational);
-
-            card.style.display = matchesSearch && matchesType && matchesStatus ? 'block' : 'none';
+            // Get filter value
+            const filterValue = this.dataset.filter;
+            filterStations(searchInput.value.toLowerCase(), filterValue);
         });
-    }
-
-    [stationSearch, typeFilter, routeFilter, statusFilter].forEach(element => {
-        element.addEventListener('change', filterStations);
     });
-    stationSearch.addEventListener('input', filterStations);
+
+    function filterStations(searchTerm, filterValue = 'all') {
+        stationCards.forEach(card => {
+            const stationName = card.querySelector('.station-name').textContent.toLowerCase();
+            const stationType = card.dataset.type;
+            const stationStatus = card.dataset.status;
+            
+            const matchesSearch = stationName.includes(searchTerm);
+            const matchesFilter = filterValue === 'all' || 
+                                (filterValue === stationType) || 
+                                (filterValue === stationStatus);
+
+            card.style.display = matchesSearch && matchesFilter ? 'block' : 'none';
+        });
+
+        // Show no results message if needed
+        const visibleCards = document.querySelectorAll('.station-card[style="display: block;"]');
+        const noStationsMessage = document.querySelector('.no-stations');
+        
+        if (visibleCards.length === 0) {
+            if (!noStationsMessage) {
+                const message = document.createElement('div');
+                message.className = 'no-stations';
+                message.textContent = 'No stations found. Please try different search criteria.';
+                document.querySelector('.stations-grid').appendChild(message);
+            }
+        } else if (noStationsMessage) {
+            noStationsMessage.remove();
+        }
+    }
 });
 </script>
-{% endblock %}
+{% endblock %} 

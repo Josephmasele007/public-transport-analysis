@@ -79,13 +79,13 @@
                             </td>
                             <td>
                                 <div class="btn-group">
-                                    <button class="btn btn-sm btn-info" onclick="viewRoute({{ route.id }})" title="View route details">
+                                    <button class="btn btn-sm btn-info" onclick="viewRoute('{{ route.id }}')" title="View route details">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-warning" onclick="editRoute({{ route.id }})" title="Edit route">
+                                    <button class="btn btn-sm btn-warning" onclick="editRoute('{{ route.id }}')" title="Edit route">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteRoute({{ route.id }})" title="Delete route">
+                                    <button class="btn btn-sm btn-danger" onclick="deleteRoute('{{ route.id }}')" title="Delete route">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -104,15 +104,15 @@
 </div>
 
 <!-- Add Route Modal -->
-<div class="modal fade" id="addRouteModal" tabindex="-1">
+<div class="modal fade" id="addRouteModal" tabindex="-1" aria-labelledby="addRouteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Route</h5>
+                <h5 class="modal-title" id="addRouteModalLabel">Add New Route</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addRouteForm" method="POST">
+                <form id="addRouteForm">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add">
                     <div class="mb-3">
@@ -141,7 +141,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Cancel">Cancel</button>
-                <button type="submit" form="addRouteForm" class="btn btn-primary" title="Save route">Save Route</button>
+                <button type="button" class="btn btn-primary" onclick="saveNewRoute()" title="Save route">Save Route</button>
             </div>
         </div>
     </div>
@@ -172,6 +172,135 @@
 </div>
 
 <script>
+// Initialize modals globally
+let addRouteModal, deleteModal;
+
+// Function to force close all modals
+function forceCloseAllModals() {
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.paddingRight = '';
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.style.display = 'none';
+    });
+}
+
+// Function to initialize modals
+function initializeModals() {
+    forceCloseAllModals();
+
+    addRouteModal = new bootstrap.Modal(document.getElementById('addRouteModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    // Add event listeners for modal close buttons
+    document.querySelectorAll('.btn-close, [data-bs-dismiss="modal"]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modalId = this.closest('.modal').id;
+            const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+            if (modal) {
+                modal.hide();
+            } else {
+                const modalElement = document.getElementById(modalId);
+                if (modalElement) {
+                    modalElement.style.display = 'none';
+                    forceCloseAllModals();
+                }
+            }
+        });
+    });
+
+    // Add event listeners for modal hidden event
+    document.querySelectorAll('.modal').forEach(modalElement => {
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            forceCloseAllModals();
+        });
+    });
+
+    // Add event listeners for modal show event
+    document.querySelectorAll('.modal').forEach(modalElement => {
+        modalElement.addEventListener('show.bs.modal', function () {
+            forceCloseAllModals();
+        });
+    });
+}
+
+// Initialize everything when the document is ready
+$(document).ready(function() {
+    initializeModals();
+
+    $(document).keydown(function(e) {
+        if (e.keyCode === 27) {
+            forceCloseAllModals();
+        }
+    });
+
+    // Update the Add Route button to use our custom show function
+    $('[data-bs-target="#addRouteModal"]').on('click', function(e) {
+        e.preventDefault();
+        showAddRouteModal();
+    });
+});
+
+// Function to show modal with error handling
+function showModal(modal) {
+    try {
+        if (modal) {
+            forceCloseAllModals();
+            modal.show();
+        }
+    } catch (error) {
+        console.error('Error showing modal:', error);
+        forceCloseAllModals();
+    }
+}
+
+// Function to show add route modal
+function showAddRouteModal() {
+    showModal(addRouteModal);
+}
+
+// Function to save new route
+function saveNewRoute() {
+    const form = document.getElementById('addRouteForm');
+    const formData = new FormData(form);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text();
+    })
+    .then(() => {
+        // Close the modal
+        if (addRouteModal) {
+            addRouteModal.hide();
+        }
+        // Reload the page to show the new route
+        window.location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating route: ' + error.message);
+    });
+}
+
 function deleteRoute(routeId) {
     document.getElementById('deleteRouteId').value = routeId;
     new bootstrap.Modal(document.getElementById('deleteModal')).show();

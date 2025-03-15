@@ -79,13 +79,13 @@
                             <td>{{ station.opening_time|time:"H:i" }} - {{ station.closing_time|time:"H:i" }}</td>
                             <td>
                                 <div class="btn-group">
-                                    <button class="btn btn-sm btn-info" onclick="viewStation({{ station.id }})" title="View station details">
+                                    <button class="btn btn-sm btn-info" onclick="viewStation('{{ station.id }}')" title="View station details">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-warning" onclick="editStation({{ station.id }})" title="Edit station">
+                                    <button class="btn btn-sm btn-warning" onclick="editStation('{{ station.id }}')" title="Edit station">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteStation({{ station.id }})" title="Delete station">
+                                    <button class="btn btn-sm btn-danger" onclick="deleteStation('{{ station.id }}')" title="Delete station">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -104,15 +104,15 @@
 </div>
 
 <!-- Add Station Modal -->
-<div class="modal fade" id="addStationModal" tabindex="-1">
+<div class="modal fade" id="addStationModal" tabindex="-1" aria-labelledby="addStationModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Station</h5>
+                <h5 class="modal-title" id="addStationModalLabel">Add New Station</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addStationForm" method="POST">
+                <form id="addStationForm">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add">
                     <div class="mb-3">
@@ -155,7 +155,63 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="Cancel">Cancel</button>
-                <button type="submit" form="addStationForm" class="btn btn-primary" title="Save station">Save Station</button>
+                <button type="button" class="btn btn-primary" onclick="saveNewStation()" title="Save station">Save Station</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Station Modal -->
+<div class="modal fade" id="editStationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Station</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editStationForm" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="station_id" id="editStationId">
+                    <div class="mb-3">
+                        <label for="editStationName" class="form-label">Station Name</label>
+                        <input type="text" class="form-control" id="editStationName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStationType" class="form-label">Station Type</label>
+                        <select class="form-select" id="editStationType" name="station_type" required>
+                            <option value="bus">Bus Station</option>
+                            <option value="brt">BRT Station</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editLocation" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="editLocation" name="location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCapacity" class="form-label">Capacity</label>
+                        <input type="number" class="form-control" id="editCapacity" name="capacity" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="editIsOperational" name="is_operational">
+                            <label class="form-check-label" for="editIsOperational">Operational</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editOpeningTime" class="form-label">Opening Time</label>
+                        <input type="time" class="form-control" id="editOpeningTime" name="opening_time" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editClosingTime" class="form-label">Closing Time</label>
+                        <input type="time" class="form-control" id="editClosingTime" name="closing_time" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="editStationForm" class="btn btn-primary">Save Changes</button>
             </div>
         </div>
     </div>
@@ -197,8 +253,199 @@ function viewStation(stationId) {
 }
 
 function editStation(stationId) {
-    // Implement edit station
-    window.location.href = `/admin_panel/data/stations/${stationId}/edit/`;
+    // Fetch station data and populate the edit form
+    fetch(`/admin_panel/data/stations/${stationId}/`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('editStationId').value = stationId;
+            document.getElementById('editStationName').value = data.name;
+            document.getElementById('editStationType').value = data.station_type;
+            document.getElementById('editLocation').value = data.location;
+            document.getElementById('editCapacity').value = data.capacity;
+            document.getElementById('editIsOperational').checked = data.is_operational;
+            document.getElementById('editOpeningTime').value = data.opening_time;
+            document.getElementById('editClosingTime').value = data.closing_time;
+            
+            new bootstrap.Modal(document.getElementById('editStationModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading station data');
+        });
 }
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Load jQuery first -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Then load Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Custom CSS for modal fixes -->
+<style>
+    .modal {
+        z-index: 1050;
+    }
+    .modal-backdrop {
+        z-index: 1040;
+    }
+    body.modal-open {
+        padding-right: 0 !important;
+    }
+    .modal-dialog {
+        margin: 1.75rem auto;
+    }
+    .modal-content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        pointer-events: auto;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid rgba(0,0,0,.2);
+        border-radius: 0.3rem;
+        outline: 0;
+    }
+</style>
+
+<script>
+// Initialize modals globally
+let addStationModal, editStationModal, deleteModal;
+
+// Function to force close all modals
+function forceCloseAllModals() {
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.paddingRight = '';
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.style.display = 'none';
+    });
+}
+
+// Function to initialize modals
+function initializeModals() {
+    forceCloseAllModals();
+
+    addStationModal = new bootstrap.Modal(document.getElementById('addStationModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    editStationModal = new bootstrap.Modal(document.getElementById('editStationModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    // Add event listeners for modal close buttons
+    document.querySelectorAll('.btn-close, [data-bs-dismiss="modal"]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modalId = this.closest('.modal').id;
+            const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+            if (modal) {
+                modal.hide();
+            } else {
+                const modalElement = document.getElementById(modalId);
+                if (modalElement) {
+                    modalElement.style.display = 'none';
+                    forceCloseAllModals();
+                }
+            }
+        });
+    });
+
+    // Add event listeners for modal hidden event
+    document.querySelectorAll('.modal').forEach(modalElement => {
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            forceCloseAllModals();
+        });
+    });
+
+    // Add event listeners for modal show event
+    document.querySelectorAll('.modal').forEach(modalElement => {
+        modalElement.addEventListener('show.bs.modal', function () {
+            forceCloseAllModals();
+        });
+    });
+}
+
+// Initialize everything when the document is ready
+$(document).ready(function() {
+    initializeModals();
+
+    $(document).keydown(function(e) {
+        if (e.keyCode === 27) {
+            forceCloseAllModals();
+        }
+    });
+
+    // Update the Add Station button to use our custom show function
+    $('[data-bs-target="#addStationModal"]').on('click', function(e) {
+        e.preventDefault();
+        showAddStationModal();
+    });
+});
+
+// Function to show modal with error handling
+function showModal(modal) {
+    try {
+        if (modal) {
+            forceCloseAllModals();
+            modal.show();
+        }
+    } catch (error) {
+        console.error('Error showing modal:', error);
+        forceCloseAllModals();
+    }
+}
+
+// Function to show add station modal
+function showAddStationModal() {
+    showModal(addStationModal);
+}
+
+// Function to save new station
+function saveNewStation() {
+    const form = document.getElementById('addStationForm');
+    const formData = new FormData(form);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text();
+    })
+    .then(() => {
+        // Close the modal
+        if (addStationModal) {
+            addStationModal.hide();
+        }
+        // Reload the page to show the new station
+        window.location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating station: ' + error.message);
+    });
+}
+
+// ... rest of your existing JavaScript functions ...
 </script>
 {% endblock %} 

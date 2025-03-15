@@ -3,7 +3,7 @@
 {% block title %}Dashboard - Tanzania Transport Analysis{% endblock %}
 
 {% block extra_css %}
-<style>
+    <style>
     :root {
         --primary-color: #4666d1;
         --secondary-color: #45a049;
@@ -26,7 +26,7 @@
         color: var(--primary-color) !important;
     }
 
-    .card {
+        .card {
         transition: transform 0.3s, box-shadow 0.3s;
         border: none;
         border-radius: 10px;
@@ -34,15 +34,15 @@
         overflow: hidden;
     }
 
-    .card:hover {
-        transform: translateY(-5px);
+        .card:hover {
+            transform: translateY(-5px);
         box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
-    }
+        }
 
-    .stats-card {
+        .stats-card {
         background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-    }
+            color: white;
+        }
 
     .stats-card .card-title {
         font-size: 0.9rem;
@@ -90,62 +90,62 @@
     .badge-success {
         background-color: rgba(76, 175, 80, 0.1);
         color: var(--primary-color);
-    }
-</style>
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
 <!-- Navigation Bar -->
 <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top mb-4">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'dashboard:dashboard' %}">
+                <a class="navbar-brand" href="{% url 'dashboard:dashboard' %}">
             <i class="fas fa-chart-line me-2"></i>Transportation Dashboard
-        </a>
+                </a>
         <div class="d-flex align-items-center">
-            {% if user.is_superuser %}
-            <a href="{% url 'admin_panel:home' %}" class="btn btn-primary">
+                    {% if user.is_superuser %}
+                    <a href="{% url 'admin_panel:home' %}" class="btn btn-primary">
                 <i class="fas fa-cog me-2"></i>Admin Panel
-            </a>
-            {% endif %}
-        </div>
-    </div>
-</nav>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
 
 <div class="container">
-    <!-- Stats Cards -->
+        <!-- Stats Cards -->
     <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="col-md-3">
+                <div class="card stats-card">
                 <div class="card-body position-relative">
-                    <h5 class="card-title">Total Routes</h5>
-                    <h2>{{ total_routes }}</h2>
+                        <h5 class="card-title">Total Routes</h5>
+                        <h2>{{ total_routes }}</h2>
                     <i class="fas fa-route stats-icon"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="col-md-3">
+                <div class="card stats-card">
                 <div class="card-body position-relative">
-                    <h5 class="card-title">Total Stations</h5>
-                    <h2>{{ total_stations }}</h2>
+                        <h5 class="card-title">Total Stations</h5>
+                        <h2>{{ total_stations }}</h2>
                     <i class="fas fa-building stats-icon"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="col-md-3">
+                <div class="card stats-card">
                 <div class="card-body position-relative">
-                    <h5 class="card-title">Average Fare</h5>
-                    <h2>TZS {{ avg_fare|floatformat:0 }}</h2>
+                        <h5 class="card-title">Average Fare</h5>
+                        <h2>TZS {{ avg_fare|floatformat:0 }}</h2>
                     <i class="fas fa-money-bill-wave stats-icon"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="col-md-3">
+                <div class="card stats-card">
                 <div class="card-body position-relative">
-                    <h5 class="card-title">Avg Travel Time</h5>
-                    <h2>{{ avg_travel_time|floatformat:0 }} min</h2>
+                        <h5 class="card-title">Avg Travel Time</h5>
+                        <h2>{{ avg_travel_time|floatformat:0 }} min</h2>
                     <i class="fas fa-clock stats-icon"></i>
                 </div>
             </div>
@@ -171,134 +171,134 @@
                 </div>
                 <div class="card-body">
                     <div id="fareDistanceChart"></div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Filters and Table -->
-    <div class="card">
+        <!-- Filters and Table -->
+        <div class="card">
         <div class="card-header bg-white">
             <h5 class="mb-0">Transportation Routes</h5>
         </div>
-        <div class="card-body">
-            <form method="get" class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <label for="road_type" class="form-label">Road Type</label>
-                    <select name="road_type" id="road_type" class="form-select">
-                        <option value="">All Road Types</option>
-                        {% for road_type in road_types %}
-                        <option value="{{ road_type }}" {% if selected_road_type == road_type %}selected{% endif %}>
-                            {{ road_type }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label for="search" class="form-label">Search</label>
+            <div class="card-body">
+                <form method="get" class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label for="road_type" class="form-label">Road Type</label>
+                        <select name="road_type" id="road_type" class="form-select">
+                            <option value="">All Road Types</option>
+                            {% for road_type in road_types %}
+                            <option value="{{ road_type }}" {% if selected_road_type == road_type %}selected{% endif %}>
+                                {{ road_type }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="search" class="form-label">Search</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
                         <input type="text" class="form-control" id="search" name="search" 
                                placeholder="Search routes..." value="{{ search_query }}">
                     </div>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-filter me-2"></i>Filter
                     </button>
-                </div>
-            </form>
+                    </div>
+                </form>
 
-            <div class="table-responsive">
-                <table class="table table-hover">
+                <div class="table-responsive">
+                    <table class="table table-hover">
                     <thead>
-                        <tr>
-                            <th>Road Name</th>
-                            <th>Route Name</th>
-                            <th>Bus Station</th>
-                            <th>BRT Station</th>
-                            <th>Distance (km)</th>
-                            <th>Peak Hours</th>
-                            <th>Fare (TZS)</th>
-                            <th>Road Type</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if routes %}
-                            {% for route in routes %}
                             <tr>
-                                <td>{{ route.road_name }}</td>
-                                <td>{{ route.route_name }}</td>
-                                <td>{{ route.bus_station }}</td>
-                                <td>{{ route.brt_station }}</td>
-                                <td>{{ route.road_distance }}</td>
+                                <th>Road Name</th>
+                                <th>Route Name</th>
+                                <th>Bus Station</th>
+                                <th>BRT Station</th>
+                                <th>Distance (km)</th>
+                                <th>Peak Hours</th>
+                                <th>Fare (TZS)</th>
+                                <th>Road Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if routes %}
+                                {% for route in routes %}
+                                <tr>
+                                    <td>{{ route.road_name }}</td>
+                                    <td>{{ route.route_name }}</td>
+                                    <td>{{ route.bus_station }}</td>
+                                    <td>{{ route.brt_station }}</td>
+                                    <td>{{ route.road_distance }}</td>
                                 <td>
                                     <span class="badge badge-custom badge-success">
                                         {{ route.peak_hours }}
                                     </span>
                                 </td>
-                                <td>{{ route.fare }}</td>
+                                    <td>{{ route.fare }}</td>
                                 <td>
                                     <span class="badge badge-custom badge-success">
                                         {{ route.road_type }}
                                     </span>
                                 </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="8" class="text-center">No routes found</td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No routes found</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
 
-            {% if routes.has_other_pages %}
-            <nav aria-label="Page navigation" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if routes.has_previous %}
-                        <li class="page-item">
+                {% if routes.has_other_pages %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if routes.has_previous %}
+                            <li class="page-item">
                             <a class="page-link" href="?page=1&road_type={{ selected_road_type }}&search={{ search_query }}">
                                 <i class="fas fa-angle-double-left"></i>
                             </a>
-                        </li>
-                        <li class="page-item">
+                            </li>
+                            <li class="page-item">
                             <a class="page-link" href="?page={{ routes.previous_page_number }}&road_type={{ selected_road_type }}&search={{ search_query }}">
                                 <i class="fas fa-angle-left"></i>
                             </a>
-                        </li>
-                    {% endif %}
-
-                    {% for num in routes.paginator.page_range %}
-                        {% if routes.number == num %}
-                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                        {% elif num > routes.number|add:'-3' and num < routes.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}&road_type={{ selected_road_type }}&search={{ search_query }}">{{ num }}</a>
                             </li>
                         {% endif %}
-                    {% endfor %}
 
-                    {% if routes.has_next %}
-                        <li class="page-item">
+                        {% for num in routes.paginator.page_range %}
+                            {% if routes.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > routes.number|add:'-3' and num < routes.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}&road_type={{ selected_road_type }}&search={{ search_query }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if routes.has_next %}
+                            <li class="page-item">
                             <a class="page-link" href="?page={{ routes.next_page_number }}&road_type={{ selected_road_type }}&search={{ search_query }}">
                                 <i class="fas fa-angle-right"></i>
                             </a>
-                        </li>
-                        <li class="page-item">
+                            </li>
+                            <li class="page-item">
                             <a class="page-link" href="?page={{ routes.paginator.num_pages }}&road_type={{ selected_road_type }}&search={{ search_query }}">
                                 <i class="fas fa-angle-double-right"></i>
                             </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
         </div>
     </div>
-</div>
 
 <!-- Hidden elements for chart data -->
 <script type="application/json" id="road-type-data">

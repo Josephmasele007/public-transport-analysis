@@ -14,7 +14,9 @@ urlpatterns = [
     # Data Management
     path('data/', views.data_types, name='data_types'),
     path('data/transportation/', views.data_management, name='data_management'),
+    path('data/transportation/update/', views.update_record, name='update_record'),
     path('data/stations/', views.stations_management, name='stations_management'),
+    path('data/stations/<int:station_id>/', views.get_station_details, name='get_station_details'),
     path('data/routes/', views.routes_management, name='routes_management'),
     path('data/traffic/', views.traffic_management, name='traffic_management'),
     path('data/transportation/delete/<int:record_id>/', views.delete_record, name='delete_record'),
@@ -46,4 +48,15 @@ urlpatterns = [
     path('apps/', views.app_management, name='app_management'),
     path('apps/<str:app_name>/', views.app_detail, name='app_detail'),
     path('apps/<str:app_name>/toggle/', views.toggle_app, name='toggle_app'),
+    
+    # Custom admin interface
+    path('custom-admin/', views.custom_admin, name='custom_admin'),
+    
+    # API endpoints
+    path('api/settings/', views.api_settings, name='api_settings'),
+    path('api/settings/<int:setting_id>/', views.api_settings_delete, name='api_settings_delete'),
+    path('api/traffic/', views.api_traffic, name='api_traffic'),
+    path('api/traffic/<int:record_id>/', views.api_traffic_delete, name='api_traffic_delete'),
+    path('api/calculators/', views.api_calculators, name='api_calculators'),
+    path('api/calculators/<int:calculator_id>/', views.api_calculators_delete, name='api_calculators_delete'),
 ]

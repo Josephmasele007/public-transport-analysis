@@ -1,0 +1,592 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Custom Admin Interface{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#dashboard" data-bs-toggle="tab">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#settings" data-bs-toggle="tab">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#traffic" data-bs-toggle="tab">
+                            <i class="fas fa-traffic-light"></i> Traffic Records
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#fares" data-bs-toggle="tab">
+                            <i class="fas fa-money-bill-wave"></i> Fare Calculators
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#history" data-bs-toggle="tab">
+                            <i class="fas fa-history"></i> Fare History
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="tab-content">
+                <!-- Dashboard Tab -->
+                <div class="tab-pane fade show active" id="dashboard">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">Dashboard</h1>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Active Routes</h5>
+                                    <p class="card-text display-4">{{ active_routes_count }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Traffic Records</h5>
+                                    <p class="card-text display-4">{{ traffic_records_count }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Fare Calculators</h5>
+                                    <p class="card-text display-4">{{ fare_calculators_count }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div class="tab-pane fade" id="settings">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">Settings</h1>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSettingModal">
+                            Add Setting
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for setting in settings %}
+                                <tr>
+                                    <td>{{ setting.key }}</td>
+                                    <td>{{ setting.value }}</td>
+                                    <td>{{ setting.updated_at }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary edit-setting" data-id="{{ setting.id }}">
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger delete-setting" data-id="{{ setting.id }}">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Traffic Records Tab -->
+                <div class="tab-pane fade" id="traffic">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">Traffic Records</h1>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTrafficModal">
+                            Add Traffic Record
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Route</th>
+                                    <th>Traffic Level</th>
+                                    <th>Timestamp</th>
+                                    <th>Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in traffic_records %}
+                                <tr>
+                                    <td>{{ record.route.name }}</td>
+                                    <td>
+                                        <span class="badge {% if record.traffic_level == 'low' %}bg-success
+                                                         {% elif record.traffic_level == 'medium' %}bg-warning
+                                                         {% elif record.traffic_level == 'high' %}bg-orange
+                                                         {% else %}bg-danger{% endif %}">
+                                            {{ record.traffic_level }}
+                                        </span>
+                                    </td>
+                                    <td>{{ record.timestamp }}</td>
+                                    <td>{{ record.description }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary edit-traffic" data-id="{{ record.id }}">
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger delete-traffic" data-id="{{ record.id }}">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Fare Calculators Tab -->
+                <div class="tab-pane fade" id="fares">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">Fare Calculators</h1>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCalculatorModal">
+                            Add Calculator
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Base Fare</th>
+                                    <th>Distance Rate</th>
+                                    <th>Peak Hour Surcharge</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for calculator in fare_calculators %}
+                                <tr>
+                                    <td>{{ calculator.name }}</td>
+                                    <td>{{ calculator.base_fare }}</td>
+                                    <td>{{ calculator.distance_rate }}</td>
+                                    <td>{{ calculator.peak_hour_surcharge }}%</td>
+                                    <td>
+                                        <span class="badge {% if calculator.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ calculator.is_active|yesno:"Active,Inactive" }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary edit-calculator" data-id="{{ calculator.id }}">
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger delete-calculator" data-id="{{ calculator.id }}">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Fare History Tab -->
+                <div class="tab-pane fade" id="history">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">Fare History</h1>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Start Station</th>
+                                    <th>End Station</th>
+                                    <th>Distance</th>
+                                    <th>Total Fare</th>
+                                    <th>Peak Hour</th>
+                                    <th>Calculated At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for history in fare_history %}
+                                <tr>
+                                    <td>{{ history.start_station }}</td>
+                                    <td>{{ history.end_station }}</td>
+                                    <td>{{ history.distance }} km</td>
+                                    <td>{{ history.total_fare }} TZS</td>
+                                    <td>
+                                        <span class="badge {% if history.is_peak_hour %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ history.is_peak_hour|yesno:"Yes,No" }}
+                                        </span>
+                                    </td>
+                                    <td>{{ history.calculated_at }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Add Setting Modal -->
+<div class="modal fade" id="addSettingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Setting</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addSettingForm">
+                    <div class="mb-3">
+                        <label class="form-label">Key</label>
+                        <input type="text" class="form-control" name="key" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Value</label>
+                        <textarea class="form-control" name="value" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveSetting">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Traffic Record Modal -->
+<div class="modal fade" id="addTrafficModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Traffic Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTrafficForm">
+                    <div class="mb-3">
+                        <label class="form-label">Route</label>
+                        <select class="form-select" name="route" required>
+                            {% for route in routes %}
+                            <option value="{{ route.id }}">{{ route.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Traffic Level</label>
+                        <select class="form-select" name="traffic_level" required>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="severe">Severe</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveTraffic">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Calculator Modal -->
+<div class="modal fade" id="addCalculatorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Fare Calculator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCalculatorForm">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Base Fare</label>
+                        <input type="number" class="form-control" name="base_fare" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Distance Rate</label>
+                        <input type="number" class="form-control" name="distance_rate" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Peak Hour Surcharge (%)</label>
+                        <input type="number" class="form-control" name="peak_hour_surcharge" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Traffic Light Surcharge (%)</label>
+                        <input type="number" class="form-control" name="traffic_light_surcharge" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Distance Discount Threshold (km)</label>
+                        <input type="number" class="form-control" name="distance_discount_threshold" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Distance Discount Rate (%)</label>
+                        <input type="number" class="form-control" name="distance_discount_rate" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="is_active" checked>
+                            <label class="form-check-label">Active</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveCalculator">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 100;
+        padding: 48px 0 0;
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    }
+
+    .sidebar .nav-link {
+        font-weight: 500;
+        color: #333;
+        padding: .5rem 1rem;
+    }
+
+    .sidebar .nav-link.active {
+        color: #2470dc;
+    }
+
+    .sidebar .nav-link:hover {
+        color: #2470dc;
+    }
+
+    .sidebar .nav-link i {
+        margin-right: 0.5rem;
+    }
+
+    main {
+        padding-top: 48px;
+    }
+
+    .bg-orange {
+        background-color: #ffa500;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submissions
+    document.getElementById('saveSetting').addEventListener('click', function() {
+        const form = document.getElementById('addSettingForm');
+        const formData = new FormData(form);
+        
+        fetch('/admin_panel/api/settings/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while saving the setting.');
+        });
+    });
+
+    document.getElementById('saveTraffic').addEventListener('click', function() {
+        const form = document.getElementById('addTrafficForm');
+        const formData = new FormData(form);
+        
+        fetch('/admin_panel/api/traffic/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while saving the traffic record.');
+        });
+    });
+
+    document.getElementById('saveCalculator').addEventListener('click', function() {
+        const form = document.getElementById('addCalculatorForm');
+        const formData = new FormData(form);
+        
+        fetch('/admin_panel/api/calculators/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while saving the calculator.');
+        });
+    });
+
+    // Handle delete buttons
+    document.querySelectorAll('.delete-setting').forEach(button => {
+        button.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this setting?')) {
+                const id = this.dataset.id;
+                fetch(`/admin_panel/api/settings/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the setting.');
+                });
+            }
+        });
+    });
+
+    document.querySelectorAll('.delete-traffic').forEach(button => {
+        button.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this traffic record?')) {
+                const id = this.dataset.id;
+                fetch(`/admin_panel/api/traffic/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the traffic record.');
+                });
+            }
+        });
+    });
+
+    document.querySelectorAll('.delete-calculator').forEach(button => {
+        button.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this calculator?')) {
+                const id = this.dataset.id;
+                fetch(`/admin_panel/api/calculators/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the calculator.');
+                });
+            }
+        });
+    });
+
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %} 

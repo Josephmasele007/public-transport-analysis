@@ -3,9 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Routes</title>
+    <title>Dar es Salaam Wards Map</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
-    <h1>Routes</h1>
+
+    <h2>Dar es Salaam Wards Map</h2>
+    <div id="map"></div>
+
+    <script>
+        var map = L.map('map').setView([-6.8, 39.2], 11);  // Center on Dar es Salaam
+
+        // Load OpenStreetMap layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Load GeoJSON Data
+        fetch("{% static 'geojson/Dar_es_salaam_wards.geojson' %}")
+        .then(response => response.json())
+        .then(data => {
+            L.geoJSON(data, {
+                style: {
+                    color: "blue",
+                    weight: 2,
+                    fillOpacity: 0.3
+                }
+            }).addTo(map);
+        });
+    </script>
+
 </body>
 </html>

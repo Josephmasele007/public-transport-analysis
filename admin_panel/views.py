@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.db.models import Avg, Count
 from django.http import HttpResponse, JsonResponse
 from dashboard.models import TransportationData
-from .models import Settings
+from .models import Settings, TrafficRecord
 import csv
 from datetime import datetime, timedelta
 from django.core import serializers
@@ -22,6 +22,8 @@ from django.utils import timezone
 from django.core.cache import cache
 import django
 from stations.models import Station, Route, StationTraffic
+from travel_cost.models import FareCalculator, FareHistory
+from django.views.decorators.http import require_http_methods
 
 def is_admin(user):
     return user.is_superuser or user.is_staff
@@ -728,19 +730,18 @@ def data_types(request):
 @login_required
 @user_passes_test(is_admin)
 def stations_management(request):
-    """
-    View function for managing stations data.
-    """
     if request.method == 'POST':
         action = request.POST.get('action')
+        
         if action == 'delete':
             station_id = request.POST.get('station_id')
             try:
-                Station.objects.filter(id=station_id).delete()
-                messages.success(request, "Station deleted successfully.")
-                return redirect('admin_panel:stations_management')
-            except Exception as e:
-                messages.error(request, f"Error deleting station: {str(e)}")
+                station = Station.objects.get(id=station_id)
+                station.delete()
+                messages.success(request, 'Station deleted successfully.')
+            except Station.DoesNotExist:
+                messages.error(request, 'Station not found.')
+        
         elif action == 'add':
             try:
                 Station.objects.create(
@@ -752,18 +753,49 @@ def stations_management(request):
                     opening_time=request.POST.get('opening_time'),
                     closing_time=request.POST.get('closing_time')
                 )
-                messages.success(request, "Station added successfully.")
-                return redirect('admin_panel:stations_management')
+                messages.success(request, 'Station added successfully.')
             except Exception as e:
-                messages.error(request, f"Error adding station: {str(e)}")
-
-    # Get all stations data
+                messages.error(request, f'Error adding station: {str(e)}')
+        
+        elif action == 'edit':
+            station_id = request.POST.get('station_id')
+            try:
+                station = Station.objects.get(id=station_id)
+                station.name = request.POST.get('name')
+                station.station_type = request.POST.get('station_type')
+                station.location = request.POST.get('location')
+                station.capacity = request.POST.get('capacity')
+                station.is_operational = request.POST.get('is_operational') == 'on'
+                station.opening_time = request.POST.get('opening_time')
+                station.closing_time = request.POST.get('closing_time')
+                station.save()
+                messages.success(request, 'Station updated successfully.')
+            except Station.DoesNotExist:
+                messages.error(request, 'Station not found.')
+            except Exception as e:
+                messages.error(request, f'Error updating station: {str(e)}')
+        
+        return redirect('admin_panel:stations_management')
+    
     stations = Station.objects.all()
-    context = {
-        'stations': stations,
-        'station_types': Station._meta.get_field('station_type').choices,
-    }
-    return render(request, 'admin_panel/stations_management.html', context)
+    return render(request, 'admin_panel/stations_management.html', {'stations': stations})
+
+@login_required
+def get_station_details(request, station_id):
+    try:
+        station = Station.objects.get(id=station_id)
+        data = {
+            'name': station.name,
+            'station_type': station.station_type,
+            'location': station.location,
+            'capacity': station.capacity,
+            'is_operational': station.is_operational,
+            'opening_time': station.opening_time.strftime('%H:%M'),
+            'closing_time': station.closing_time.strftime('%H:%M')
+        }
+        return JsonResponse(data)
+    except Station.DoesNotExist:
+        return JsonResponse({'error': 'Station not found'}, status=404)
 
 @login_required
 @user_passes_test(is_admin)
@@ -798,17 +830,195 @@ def traffic_management(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'delete':
-            traffic_id = request.POST.get('traffic_id')
+            record_id = request.POST.get('record_id')
             try:
-                StationTraffic.objects.filter(id=traffic_id).delete()
+                StationTraffic.objects.filter(id=record_id).delete()
                 messages.success(request, "Traffic record deleted successfully.")
                 return redirect('admin_panel:traffic_management')
             except Exception as e:
                 messages.error(request, f"Error deleting traffic record: {str(e)}")
+        elif action == 'add':
+            try:
+                StationTraffic.objects.create(
+                    location=request.POST.get('location'),
+                    date=request.POST.get('date'),
+                    time=request.POST.get('time'),
+                    traffic_level=request.POST.get('traffic_level'),
+                    peak_hours=request.POST.get('peak_hours'),
+                    is_active=request.POST.get('is_active') == 'on'
+                )
+                messages.success(request, "Traffic record added successfully.")
+                return redirect('admin_panel:traffic_management')
+            except Exception as e:
+                messages.error(request, f"Error adding traffic record: {str(e)}")
 
-    # Get all traffic data with related stations
-    traffic_data = StationTraffic.objects.all().select_related('station')
+    # Get all traffic records
+    traffic_records = StationTraffic.objects.all()
     context = {
-        'traffic_data': traffic_data,
+        'traffic_records': traffic_records,
     }
     return render(request, 'admin_panel/traffic_management.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def update_record(request):
+    if request.method == 'POST':
+        try:
+            record_id = request.POST.get('record_id')
+            record = TransportationData.objects.get(id=record_id)
+            
+            # Update record fields
+            record.road_name = request.POST.get('road_name')
+            record.route_name = request.POST.get('route_name')
+            record.bus_station = request.POST.get('bus_station')
+            record.brt_station = request.POST.get('brt_station')
+            record.road_distance = float(request.POST.get('road_distance'))
+            record.fare = float(request.POST.get('fare'))
+            
+            record.save()
+            return JsonResponse({'success': True})
+        except TransportationData.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Record not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+
+@login_required
+def custom_admin(request):
+    """Custom admin interface view"""
+    # Get dashboard statistics
+    active_routes_count = Route.objects.filter(is_active=True).count()
+    traffic_records_count = TrafficRecord.objects.count()
+    fare_calculators_count = FareCalculator.objects.count()
+
+    # Get data for each section
+    settings = Settings.objects.all().order_by('-updated_at')
+    traffic_records = TrafficRecord.objects.all().order_by('-timestamp')
+    fare_calculators = FareCalculator.objects.all().order_by('-updated_at')
+    fare_history = FareHistory.objects.all().order_by('-calculated_at')[:100]  # Last 100 records
+    routes = Route.objects.filter(is_active=True).order_by('name')
+
+    context = {
+        'active_routes_count': active_routes_count,
+        'traffic_records_count': traffic_records_count,
+        'fare_calculators_count': fare_calculators_count,
+        'settings': settings,
+        'traffic_records': traffic_records,
+        'fare_calculators': fare_calculators,
+        'fare_history': fare_history,
+        'routes': routes,
+    }
+    return render(request, 'admin_panel/django_admin.html', context)
+
+@require_http_methods(["POST"])
+def api_settings(request):
+    """API endpoint for managing settings"""
+    try:
+        key = request.POST.get('key')
+        value = request.POST.get('value')
+        
+        if not key or not value:
+            return JsonResponse({'success': False, 'error': 'Key and value are required'})
+        
+        setting, created = Settings.objects.update_or_create(
+            key=key,
+            defaults={'value': value}
+        )
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_http_methods(["DELETE"])
+def api_settings_delete(request, setting_id):
+    """API endpoint for deleting settings"""
+    try:
+        setting = Settings.objects.get(id=setting_id)
+        setting.delete()
+        return JsonResponse({'success': True})
+    except Settings.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Setting not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_http_methods(["POST"])
+def api_traffic(request):
+    """API endpoint for managing traffic records"""
+    try:
+        route_id = request.POST.get('route')
+        traffic_level = request.POST.get('traffic_level')
+        description = request.POST.get('description')
+        
+        if not route_id or not traffic_level:
+            return JsonResponse({'success': False, 'error': 'Route and traffic level are required'})
+        
+        route = Route.objects.get(id=route_id)
+        TrafficRecord.objects.create(
+            route=route,
+            traffic_level=traffic_level,
+            description=description
+        )
+        
+        return JsonResponse({'success': True})
+    except Route.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Route not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_http_methods(["DELETE"])
+def api_traffic_delete(request, record_id):
+    """API endpoint for deleting traffic records"""
+    try:
+        record = TrafficRecord.objects.get(id=record_id)
+        record.delete()
+        return JsonResponse({'success': True})
+    except TrafficRecord.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Traffic record not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_http_methods(["POST"])
+def api_calculators(request):
+    """API endpoint for managing fare calculators"""
+    try:
+        name = request.POST.get('name')
+        base_fare = float(request.POST.get('base_fare', 0))
+        distance_rate = float(request.POST.get('distance_rate', 0))
+        peak_hour_surcharge = float(request.POST.get('peak_hour_surcharge', 0))
+        traffic_light_surcharge = float(request.POST.get('traffic_light_surcharge', 0))
+        distance_discount_threshold = float(request.POST.get('distance_discount_threshold', 0))
+        distance_discount_rate = float(request.POST.get('distance_discount_rate', 0))
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if not name or base_fare <= 0 or distance_rate <= 0:
+            return JsonResponse({'success': False, 'error': 'Required fields are missing or invalid'})
+        
+        FareCalculator.objects.create(
+            name=name,
+            base_fare=base_fare,
+            distance_rate=distance_rate,
+            peak_hour_surcharge=peak_hour_surcharge,
+            traffic_light_surcharge=traffic_light_surcharge,
+            distance_discount_threshold=distance_discount_threshold,
+            distance_discount_rate=distance_discount_rate,
+            is_active=is_active
+        )
+        
+        return JsonResponse({'success': True})
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Invalid numeric values'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_http_methods(["DELETE"])
+def api_calculators_delete(request, calculator_id):
+    """API endpoint for deleting fare calculators"""
+    try:
+        calculator = FareCalculator.objects.get(id=calculator_id)
+        calculator.delete()
+        return JsonResponse({'success': True})
+    except FareCalculator.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Calculator not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
