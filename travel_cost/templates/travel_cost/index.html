@@ -5,39 +5,58 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-md-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Calculate Fare</h5>
-                </div>
                 <div class="card-body">
+                    <h5 class="mb-4">Calculate Fare</h5>
                     <form id="fareCalculatorForm">
                         <div class="mb-3">
-                            <label for="startStation" class="form-label">Start Station</label>
-                            <select class="form-select" id="startStation" required>
+                            <label for="start_station" class="form-label">Start Station</label>
+                            <select class="form-select" id="start_station" name="start_station" required>
                                 <option value="">Select start station</option>
                                 {% for station in stations %}
-                                <option value="{{ station.id }}">{{ station.name }}</option>
+                                <option value="{{ station.name }}" data-type="{{ station.type }}" data-location="{{ station.location }}">
+                                    {{ station.name }} ({{ station.type|title }})
+                                </option>
                                 {% endfor %}
                             </select>
+                            <small class="form-text text-muted station-info" id="start_station_info"></small>
                         </div>
                         <div class="mb-3">
-                            <label for="endStation" class="form-label">End Station</label>
-                            <select class="form-select" id="endStation" required>
+                            <label for="end_station" class="form-label">End Station</label>
+                            <select class="form-select" id="end_station" name="end_station" required>
                                 <option value="">Select end station</option>
                                 {% for station in stations %}
-                                <option value="{{ station.id }}">{{ station.name }}</option>
+                                <option value="{{ station.name }}" data-type="{{ station.type }}" data-location="{{ station.location }}">
+                                    {{ station.name }} ({{ station.type|title }})
+                                </option>
                                 {% endfor %}
                             </select>
+                            <small class="form-text text-muted station-info" id="end_station_info"></small>
                         </div>
                         <div class="mb-3">
-                            <label for="routeSelect" class="form-label">Select Route</label>
-                            <select class="form-select" id="routeSelect" required>
+                            <label for="route">Route</label>
+                            <select class="form-select" id="route" name="route">
                                 <option value="">Select a route</option>
+                                {% for route in routes %}
+                                <option value="{{ route.id }}" 
+                                        data-traffic-lights="{{ route.traffic_lights }}"
+                                        data-distance="{{ route.distance }}"
+                                        data-travel-time="{{ route.travel_time }}"
+                                        data-congestion="{{ route.congestion_level }}">
+                                    {{ route.name }} ({{ route.road_name }})
+                                </option>
+                                {% endfor %}
                             </select>
+                            <small class="form-text text-muted" id="route_info"></small>
                         </div>
                         <div class="mb-3">
+                            <label for="traffic_lights" class="form-label">Number of Traffic Lights</label>
+                            <input type="number" class="form-control" id="traffic_lights" name="traffic_lights" readonly>
+                            <small class="form-text text-muted">Number of traffic lights on the selected route</small>
+                        </div>
+                        <div class="mb-4">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="peakHourCheck">
                                 <label class="form-check-label" for="peakHourCheck">
@@ -45,59 +64,47 @@
                                 </label>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Calculate Fare</button>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Calculate Fare</button>
+                        </div>
                     </form>
                 </div>
             </div>
 
-            <div class="card mt-4" id="fareDetails" style="display: none;">
+            <!-- Fare Details Section -->
+            <div id="fareDetails" class="card mt-4" style="display: none;">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Fare Breakdown</h5>
+                    <h5 class="mb-0">Fare Breakdown</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-12">
-                            <h4 class="text-center mb-3">Total Fare: <span id="totalFare">0.00</span> TZS</h4>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <table class="table table-sm">
-                                <tbody>
-                                    <tr>
-                                        <td>Base Fare</td>
-                                        <td class="text-end"><span id="baseFare">0.00</span> TZS</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Distance Fare</td>
-                                        <td class="text-end"><span id="distanceFare">0.00</span> TZS</td>
-                                    </tr>
-                                    <tr id="peakHourRow" style="display: none;">
-                                        <td>Peak Hour Surcharge</td>
-                                        <td class="text-end"><span id="peakHourSurcharge">0.00</span> TZS</td>
-                                    </tr>
-                                    <tr id="trafficLightRow" style="display: none;">
-                                        <td>Traffic Light Surcharge</td>
-                                        <td class="text-end"><span id="trafficLightSurcharge">0.00</span> TZS</td>
-                                    </tr>
-                                    <tr id="distanceDiscountRow" style="display: none;">
-                                        <td>Distance Discount</td>
-                                        <td class="text-end"><span id="distanceDiscount">0.00</span> TZS</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Route Map</h5>
-                </div>
-                <div class="card-body">
-                    <div id="map" style="height: 500px;"></div>
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <td>Base Fare</td>
+                                <td>Tsh<span id="baseFare">0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td>Distance Fare (<span id="routeDistance">0</span> km)</td>
+                                <td>Tsh<span id="distanceFare">0.00</span></td>
+                            </tr>
+                            <tr id="peakHourRow">
+                                <td>Peak Hour Surcharge</td>
+                                <td>Tsh<span id="peakHourSurcharge">0.00</span></td>
+                            </tr>
+                            <tr id="trafficLightRow">
+                                <td>Traffic Light Surcharge</td>
+                                <td>Tsh<span id="trafficLightSurcharge">0.00</span></td>
+                            </tr>
+                            <tr id="distanceDiscountRow">
+                                <td>Distance Discount</td>
+                                <td>Tsh - <span id="distanceDiscount">0.00</span></td>
+                            </tr>
+                            <tr class="table-primary">
+                                <th>Total Fare</th>
+                                <th>Tsh<span id="totalFare">0.00</span></th>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -111,199 +118,187 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <style>
-    #map {
-        border-radius: 4px;
-    }
     .card {
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        background: #fff;
     }
-    .card-header {
-        background-color: #f8f9fa;
+    .card-body {
+        padding: 2rem;
+    }
+    h5 {
+        color: #333;
+        font-weight: 500;
+        margin-bottom: 1.5rem;
+    }
+    .form-label {
+        color: #333;
+        font-weight: 500;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .form-select, .form-control {
+        border-radius: 4px;
+        border: 1px solid #dee2e6;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+        color: #495057;
+        background-color: #fff;
+    }
+    .form-select:focus, .form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    .form-check-label {
+        color: #495057;
+        font-size: 0.9rem;
+    }
+    .btn-primary {
+        padding: 0.6rem 1rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+        background-color: #0d6efd;
+        border: none;
+    }
+    .btn-primary:hover {
+        background-color: #0b5ed7;
+    }
+    .table {
+        margin-bottom: 0;
     }
     .table td {
-        padding: 0.5rem;
+        padding: 0.75rem 0;
+        border-top: 1px solid #dee2e6;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+    .table tr:first-child td {
+        border-top: none;
+    }
+    #totalFare {
+        font-weight: 600;
+        color: #0d6efd;
+    }
+    .station-info {
+        margin-top: 0.25rem;
+        font-size: 0.8rem;
+    }
+    .form-text {
+        color: #6c757d;
     }
 </style>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
-    let map;
-    let routeLayer;
-    let transportData;
-    let calculator;
-
-    // Initialize map
-    function initMap() {
-        map = L.map('map').setView([-6.7924, 39.2083], 13); // Center on Dar es Salaam
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-    }
-
-    // Initialize data
-    function initData() {
-        try {
-            transportData = JSON.parse(document.getElementById('transportData').textContent);
-            calculator = transportData.calculator;
-        } catch (error) {
-            console.error('Error parsing transport data:', error);
-            alert('Error loading transport data. Please try again later.');
-        }
-    }
-
-    // Update route options
-    function updateRouteOptions() {
-        const startStation = document.getElementById('startStation').value;
-        const endStation = document.getElementById('endStation').value;
-        const routeSelect = document.getElementById('routeSelect');
-        
-        routeSelect.innerHTML = '<option value="">Select a route</option>';
-        
-        if (!startStation || !endStation) return;
-        
-        const routes = transportData.routes.filter(route => 
-            route.start_station.id === parseInt(startStation) && 
-            route.end_station.id === parseInt(endStation)
-        );
-        
-        routes.forEach(route => {
-            const option = document.createElement('option');
-            option.value = route.id;
-            option.textContent = `${route.name} (${route.distance} km, ${route.estimated_time} min)`;
-            routeSelect.appendChild(option);
-        });
-    }
-
-    // Display route on map
-    function displayRoute(routeId) {
-        if (routeLayer) {
-            map.removeLayer(routeLayer);
-        }
-        
-        const route = transportData.routes.find(r => r.id === parseInt(routeId));
-        if (!route) return;
-        
-        // Draw route line
-        const coordinates = route.coordinates.map(coord => [coord.lat, coord.lng]);
-        routeLayer = L.polyline(coordinates, {
-            color: '#007bff',
-            weight: 3
-        }).addTo(map);
-        
-        // Fit map to show entire route
-        map.fitBounds(routeLayer.getBounds());
-        
-        // Add markers for start and end stations
-        L.marker([route.start_station.latitude, route.start_station.longitude])
-            .bindPopup(`Start: ${route.start_station.name}`)
-            .addTo(map);
+document.addEventListener('DOMContentLoaded', function() {
+    const transportData = JSON.parse('{{ transport_data|safe }}');
+    const routeSelect = document.getElementById('route');
+    const trafficLightsInput = document.getElementById('traffic_lights');
+    const fareCalculatorForm = document.getElementById('fareCalculatorForm');
+    
+    routeSelect.addEventListener('change', function() {
+        const selectedOption = this.selectedOptions[0];
+        if (selectedOption && selectedOption.value) {
+            // Update traffic lights
+            trafficLightsInput.value = selectedOption.dataset.trafficLights;
             
-        L.marker([route.end_station.latitude, route.end_station.longitude])
-            .bindPopup(`End: ${route.end_station.name}`)
-            .addTo(map);
-    }
+            // Update route info
+            const routeInfo = document.getElementById('route_info');
+            routeInfo.textContent = `Distance: ${selectedOption.dataset.distance}km, ` +
+                                  `Travel Time: ${selectedOption.dataset.travelTime}min, ` +
+                                  `Congestion: ${selectedOption.dataset.congestion}`;
+        } else {
+            trafficLightsInput.value = '';
+            document.getElementById('route_info').textContent = '';
+        }
+    });
 
-    // Calculate and display fare
-    async function calculateFare() {
-        const routeId = document.getElementById('routeSelect').value;
+    // Calculate fare function
+    function calculateFare(event) {
+        event.preventDefault();
+        
+        const selectedOption = routeSelect.selectedOptions[0];
+        if (!selectedOption || !selectedOption.value) {
+            alert('Please select a route');
+            return;
+        }
+
+        const distance = parseFloat(selectedOption.dataset.distance);
+        const trafficLights = parseInt(selectedOption.dataset.trafficLights) || 0;
         const isPeakHour = document.getElementById('peakHourCheck').checked;
         
-        if (!routeId) return;
-        
-        try {
-            const response = await fetch('/travel_cost/calculate_fare/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    route_id: routeId,
-                    is_peak_hour: isPeakHour
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                displayFareBreakdown(data);
-                document.getElementById('fareDetails').style.display = 'block';
-            } else {
-                alert(data.error || 'Error calculating fare');
-            }
-        } catch (error) {
-            console.error('Error calculating fare:', error);
-            alert('Error calculating fare. Please try again later.');
+        // Get calculator data
+        const calculator = transportData.calculator;
+        if (!calculator) {
+            alert('Error: Fare calculator not available');
+            return;
         }
-    }
 
-    // Display fare breakdown
-    function displayFareBreakdown(data) {
-        document.getElementById('totalFare').textContent = data.fare.toFixed(2);
-        document.getElementById('baseFare').textContent = data.breakdown.base_fare.toFixed(2);
-        document.getElementById('distanceFare').textContent = data.breakdown.distance_fare.toFixed(2);
+        // Calculate fare components
+        const baseFare = parseFloat(calculator.base_fare);
+        const distanceFare = distance * parseFloat(calculator.distance_rate);
+        let totalFare = baseFare + distanceFare;
+        let distanceDiscount = 0;
         
+        // Calculate distance discount
+        if (distance >= parseFloat(calculator.distance_discount_threshold)) {
+            distanceDiscount = (distanceFare * parseFloat(calculator.distance_discount_rate)) / 100;
+            totalFare -= distanceDiscount;
+        }
+        
+        // Calculate peak hour surcharge
+        let peakHourSurcharge = 0;
+        if (isPeakHour) {
+            peakHourSurcharge = (totalFare * parseFloat(calculator.peak_hour_surcharge)) / 100;
+            totalFare += peakHourSurcharge;
+        }
+        
+        // Calculate traffic light surcharge
+        let trafficLightSurcharge = 0;
+        if (trafficLights > 0) {
+            trafficLightSurcharge = (totalFare * parseFloat(calculator.traffic_light_surcharge) * trafficLights) / 100;
+            totalFare += trafficLightSurcharge;
+        }
+
+        // Display results
+        document.getElementById('fareDetails').style.display = 'block';
+        document.getElementById('totalFare').textContent = totalFare.toFixed(2);
+        document.getElementById('baseFare').textContent = baseFare.toFixed(2);
+        document.getElementById('distanceFare').textContent = distanceFare.toFixed(2);
+        document.getElementById('routeDistance').textContent = distance;
+        
+        // Show/hide and update surcharges
         const peakHourRow = document.getElementById('peakHourRow');
         const trafficLightRow = document.getElementById('trafficLightRow');
         const distanceDiscountRow = document.getElementById('distanceDiscountRow');
         
-        if (data.breakdown.peak_hour_surcharge > 0) {
+        if (peakHourSurcharge > 0) {
+            document.getElementById('peakHourSurcharge').textContent = peakHourSurcharge.toFixed(2);
             peakHourRow.style.display = 'table-row';
-            document.getElementById('peakHourSurcharge').textContent = data.breakdown.peak_hour_surcharge.toFixed(2);
         } else {
             peakHourRow.style.display = 'none';
         }
         
-        if (data.breakdown.traffic_light_surcharge > 0) {
+        if (trafficLightSurcharge > 0) {
+            document.getElementById('trafficLightSurcharge').textContent = trafficLightSurcharge.toFixed(2);
             trafficLightRow.style.display = 'table-row';
-            document.getElementById('trafficLightSurcharge').textContent = data.breakdown.traffic_light_surcharge.toFixed(2);
         } else {
             trafficLightRow.style.display = 'none';
         }
         
-        if (data.breakdown.distance_discount > 0) {
+        if (distanceDiscount > 0) {
+            document.getElementById('distanceDiscount').textContent = distanceDiscount.toFixed(2);
             distanceDiscountRow.style.display = 'table-row';
-            document.getElementById('distanceDiscount').textContent = data.breakdown.distance_discount.toFixed(2);
         } else {
             distanceDiscountRow.style.display = 'none';
         }
     }
 
-    // Get CSRF token
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // Event listeners
-    document.addEventListener('DOMContentLoaded', function() {
-        initMap();
-        initData();
-        
-        document.getElementById('startStation').addEventListener('change', updateRouteOptions);
-        document.getElementById('endStation').addEventListener('change', updateRouteOptions);
-        document.getElementById('routeSelect').addEventListener('change', function() {
-            displayRoute(this.value);
-        });
-        
-        document.getElementById('fareCalculatorForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            calculateFare();
-        });
-    });
+    // Add form submit handler
+    fareCalculatorForm.addEventListener('submit', calculateFare);
+});
 </script>
-{% endblock %} 
+{% endblock %}

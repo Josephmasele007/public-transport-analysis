@@ -1,18 +1,14 @@
 from django.shortcuts import render
-from dashboard.models import TransportationData
+from dashboard.models import TransportData
 from .ml_model import TravelCostPredictor
 import numpy as np
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.models import Count, Sum
 from django.utils import timezone
-from stations.models import Station, Route, RouteStation, StationTraffic
 import json
 from django.views.decorators.http import require_http_methods
-from django.utils import timezone
 from .models import FareCalculator, FareHistory
-from admin_panel.models import TrafficRecord
-from django.db import models
 
 def travel_cost(request):
     # Your logic for the dashboard page goes here
@@ -20,11 +16,8 @@ def travel_cost(request):
 
 def index(request):
     try:
-        # Get all stations
-        stations = Station.objects.all()
-        
-        # Get all routes with their stations
-        routes = Route.objects.all().prefetch_related('routestation_set__station')
+        # Get transport data
+        transport_data_entries = TransportData.objects.all()
         
         # Get active fare calculator
         calculator = FareCalculator.objects.filter(is_active=True).first()
@@ -32,8 +25,50 @@ def index(request):
         # Prepare transport data
         transport_data = {
             'routes': [],
-            'calculator': None
+            'calculator': None,
+            'stations': {
+                'bus': [],
+                'brt': []
+            }
         }
+        
+        # Process stations and routes
+        for entry in transport_data_entries:
+            # Add route
+            route_data = {
+                'id': entry.id,
+                'name': entry.route_name,
+                'road_name': entry.road_name,
+                'distance': entry.road_distance,
+                'travel_time': entry.travel_time,
+                'fare': entry.fare,
+                'traffic_lights': entry.traffic_lights_count,
+                'congestion_level': entry.congestion_level,
+                'route_type': entry.route_type
+            }
+            
+            if route_data not in transport_data['routes']:
+                transport_data['routes'].append(route_data)
+            
+            # Add bus station if not already added
+            if entry.bus_station and entry.bus_station not in [s['name'] for s in transport_data['stations']['bus']]:
+                transport_data['stations']['bus'].append({
+                    'id': f"bus_{len(transport_data['stations']['bus'])}",
+                    'name': entry.bus_station,
+                    'type': 'bus',
+                    'location': entry.bus_station_location,
+                    'landmark': entry.landmark_nearby
+                })
+            
+            # Add BRT station if not already added
+            if entry.brt_station and entry.brt_station not in [s['name'] for s in transport_data['stations']['brt']]:
+                transport_data['stations']['brt'].append({
+                    'id': f"brt_{len(transport_data['stations']['brt'])}",
+                    'name': entry.brt_station,
+                    'type': 'brt',
+                    'location': entry.brt_station_location,
+                    'landmark': entry.landmark_nearby
+                })
         
         if calculator:
             transport_data['calculator'] = {
@@ -45,45 +80,12 @@ def index(request):
                 'distance_discount_rate': float(calculator.distance_discount_rate)
             }
         
-        # Process routes
-        for route in routes:
-            route_stations = route.routestation_set.all().order_by('order')
-            if len(route_stations) >= 2:
-                start_station = route_stations.first().station
-                end_station = route_stations.last().station
-                
-                # Get traffic data for this route
-                traffic_records = TrafficRecord.objects.filter(
-                    route=route,
-                    timestamp__gte=timezone.now() - timezone.timedelta(hours=24)
-                )
-                
-                # Calculate average traffic level
-                avg_traffic = traffic_records.aggregate(avg_level=models.Avg('traffic_level'))['avg_level'] or 0
-                
-                transport_data['routes'].append({
-                    'id': route.id,
-                    'name': route.name,
-                    'start_station': {
-                        'id': start_station.id,
-                        'name': start_station.name,
-                        'latitude': start_station.latitude,
-                        'longitude': start_station.longitude
-                    },
-                    'end_station': {
-                        'id': end_station.id,
-                        'name': end_station.name,
-                        'latitude': end_station.latitude,
-                        'longitude': end_station.longitude
-                    },
-                    'distance': float(route.distance),
-                    'estimated_time': route.estimated_time,
-                    'traffic_level': avg_traffic,
-                    'coordinates': route.coordinates
-                })
+        # Combine all stations for the template
+        all_stations = transport_data['stations']['bus'] + transport_data['stations']['brt']
         
         context = {
-            'stations': stations,
+            'stations': all_stations,
+            'routes': transport_data['routes'],  
             'transport_data': json.dumps(transport_data)
         }
         return render(request, 'travel_cost/index.html', context)
@@ -92,6 +94,7 @@ def index(request):
         return render(request, 'travel_cost/index.html', {
             'error_message': f"Error loading data: {str(e)}",
             'stations': [],
+            'routes': [],
             'transport_data': json.dumps({'routes': [], 'calculator': None})
         })
 
@@ -100,56 +103,28 @@ def refresh_stations(request):
     if request.method == 'GET':
         try:
             # Get updated station data with traffic information
-            stations = Station.objects.all().prefetch_related('routes', 'routestation_set__route')
-            today = timezone.now().date()
+            transport_data_entries = TransportData.objects.all()
             
             stations_data = []
-            for station in stations:
-                # Get today's traffic
-                today_traffic = StationTraffic.objects.filter(
-                    station=station,
-                    date=today
-                ).aggregate(
-                    total_passengers=Sum('passenger_count')
-                )['total_passengers'] or 0
-
-                # Get routes with detailed information
-                routes = []
-                for route in station.routes.all():
-                    route_station = RouteStation.objects.filter(
-                        route=route,
-                        station=station
-                    ).first()
-                    
-                    if route_station:
-                        routes.append({
-                            'name': route.name,
-                            'fare': float(route.fare),
-                            'distance': float(route.distance),
-                            'estimated_time': route.estimated_time,
-                            'arrival_time': route_station.arrival_time.strftime('%H:%M'),
-                            'departure_time': route_station.departure_time.strftime('%H:%M'),
-                            'stop_duration': route_station.stop_duration
-                        })
-
+            for entry in transport_data_entries:
                 station_data = {
-                    'id': station.id,
-                    'name': station.name,
-                    'station_type': station.station_type,
-                    'get_station_type_display': station.get_station_type_display(),
-                    'location': station.location,
-                    'landmark_nearby': station.landmark_nearby,
-                    'opening_time': station.opening_time.strftime('%H:%M'),
-                    'closing_time': station.closing_time.strftime('%H:%M'),
-                    'capacity': station.capacity,
-                    'is_operational': station.is_operational,
+                    'id': f"bus_{len(stations_data)}",
+                    'name': entry.bus_station,
+                    'station_type': 'bus',
+                    'get_station_type_display': 'Bus',
+                    'location': entry.bus_station_location,
+                    'landmark_nearby': entry.landmark_nearby,
+                    'opening_time': '06:00',
+                    'closing_time': '22:00',
+                    'capacity': 1000,
+                    'is_operational': True,
                     'coordinates': {
-                        'lat': float(station.latitude) if station.latitude else None,
-                        'lng': float(station.longitude) if station.longitude else None
+                        'lat': 10.0,
+                        'lng': 10.0
                     },
-                    'today_traffic': today_traffic,
-                    'routes_count': len(routes),
-                    'routes': routes
+                    'today_traffic': 100,
+                    'routes_count': 10,
+                    'routes': []
                 }
                 stations_data.append(station_data)
             
@@ -170,23 +145,23 @@ def refresh_stations(request):
 
 def get_station_details(request, station_id):
     try:
-        station = Station.objects.get(id=station_id)
-        routes = Route.objects.filter(routestation__station=station).distinct()
+        transport_data_entries = TransportData.objects.filter(bus_station=station_id)
+        routes = []
+        for entry in transport_data_entries:
+            routes.append({
+                'id': entry.id,
+                'name': entry.route_name,
+                'distance': entry.road_distance,
+                'estimated_time': entry.travel_time
+            })
         
         return JsonResponse({
-            'id': station.id,
-            'name': station.name,
-            'latitude': station.latitude,
-            'longitude': station.longitude,
-            'routes': [{
-                'id': route.id,
-                'name': route.name,
-                'distance': float(route.distance),
-                'estimated_time': route.estimated_time
-            } for route in routes]
+            'id': station_id,
+            'name': station_id,
+            'latitude': 10.0,
+            'longitude': 10.0,
+            'routes': routes
         })
-    except Station.DoesNotExist:
-        return JsonResponse({'error': 'Station not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
@@ -240,16 +215,8 @@ def get_route_details(request):
                     'error': 'Both from and to stations are required'
                 })
             
-            route = TransportationData.objects.filter(
-                bus_station=from_station,
-                brt_station=to_station
-            ).first()
-            
-            if not route:
-                route = TransportationData.objects.filter(
-                    bus_station=to_station,
-                    brt_station=from_station
-                ).first()
+            transport_data_entries = TransportData.objects.filter(bus_station=from_station, brt_station=to_station)
+            route = transport_data_entries.first()
             
             if route:
                 return JsonResponse({
@@ -258,7 +225,7 @@ def get_route_details(request):
                         'distance': route.road_distance,
                         'travel_time': route.travel_time,
                         'traffic_lights': route.traffic_lights_count,
-                        'road_type': route.road_type,
+                        'road_type': route.route_type,
                         'landmarks': route.landmark_nearby,
                         'peak_hours': route.peak_hours
                     }
@@ -290,7 +257,7 @@ def calculate_fare(request):
         is_peak_hour = data.get('is_peak_hour', False)
         
         # Get the route
-        route = Route.objects.get(id=route_id)
+        transport_data_entry = TransportData.objects.get(id=route_id)
         
         # Get active calculator
         calculator = FareCalculator.objects.filter(is_active=True).first()
@@ -299,44 +266,34 @@ def calculate_fare(request):
                 'error': 'No active fare calculator found'
             }, status=400)
         
-        # Get traffic data
-        traffic_records = TrafficRecord.objects.filter(
-            route=route,
-            timestamp__gte=timezone.now() - timezone.timedelta(hours=24)
-        )
-        
-        # Calculate average traffic level and count traffic lights
-        avg_traffic = traffic_records.aggregate(avg_level=models.Avg('traffic_level'))['avg_level'] or 0
-        traffic_lights = traffic_records.count()
-        
         # Calculate fare
         fare_breakdown = calculator.calculate_fare(
-            distance=route.distance,
+            distance=transport_data_entry.road_distance,
             is_peak_hour=is_peak_hour,
-            traffic_lights=traffic_lights
+            traffic_lights=transport_data_entry.traffic_lights_count
         )
         
         # Save to history
         FareHistory.objects.create(
             calculator=calculator,
-            start_station=route.routestation_set.first().station.name,
-            end_station=route.routestation_set.last().station.name,
-            distance=route.distance,
+            start_station=start_station_id,
+            end_station=end_station_id,
+            distance=transport_data_entry.road_distance,
             base_fare=calculator.base_fare,
-            distance_fare=float(route.distance) * float(calculator.distance_rate),
+            distance_fare=float(transport_data_entry.road_distance) * float(calculator.distance_rate),
             peak_hour_surcharge=fare_breakdown.get('peak_hour_surcharge', 0),
             traffic_light_surcharge=fare_breakdown.get('traffic_light_surcharge', 0),
             distance_discount=fare_breakdown.get('distance_discount', 0),
             total_fare=fare_breakdown['total_fare'],
             is_peak_hour=is_peak_hour,
-            traffic_lights=traffic_lights
+            traffic_lights=transport_data_entry.traffic_lights_count
         )
         
         return JsonResponse({
             'fare': fare_breakdown['total_fare'],
             'breakdown': fare_breakdown,
-            'traffic_level': avg_traffic,
-            'traffic_lights': traffic_lights
+            'traffic_level': 10.0,
+            'traffic_lights': transport_data_entry.traffic_lights_count
         })
         
     except Exception as e:

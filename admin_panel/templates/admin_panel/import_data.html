@@ -10,6 +10,7 @@
         <h5>Import Data</h5>
     </div>
     <div class="card-body">
+        {% if not file_name %}
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="mb-3">
@@ -17,48 +18,83 @@
                 <input type="file" class="form-control" id="file" name="file" accept=".csv,.json" required>
                 <div class="form-text">Supported formats: CSV, JSON</div>
             </div>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-upload me-2"></i>Import Data
+            <button type="submit" name="preview" value="1" class="btn btn-primary">
+                <i class="fas fa-eye me-2"></i>Preview Data
             </button>
         </form>
+        {% endif %}
     </div>
 </div>
 
 {% if imported_data %}
 <div class="card mt-4">
     <div class="card-header">
-        <h5>Imported Data Preview</h5>
+        <h5>Data Preview - {{ file_name }}</h5>
     </div>
     <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>Showing first 10 rows of {{ total_rows }} records
+        </div>
         <div class="table-responsive">
             <table class="table table-striped">
                 <thead>
                     <tr>
                         <th>Road Name</th>
+                        <th>Road Distance</th>
                         <th>Route Name</th>
                         <th>Bus Station</th>
                         <th>BRT Station</th>
-                        <th>Distance</th>
+                        <th>Peak Hours</th>
+                        <th>Average Speed</th>
+                        <th>Travel Time</th>
                         <th>Fare</th>
+                        <th>Landmark</th>
+                        <th>Road Type</th>
+                        <th>Traffic Lights</th>
+                        <th>Route Type</th>
+                        <th>Congestion</th>
+                        <th>Capacity</th>
+                        <th>Alt. Routes</th>
+                        <th>Bus Location</th>
+                        <th>BRT Location</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in imported_data %}
                     <tr>
                         <td>{{ item.road_name }}</td>
+                        <td>{{ item.road_distance }}</td>
                         <td>{{ item.route_name }}</td>
                         <td>{{ item.bus_station }}</td>
                         <td>{{ item.brt_station }}</td>
-                        <td>{{ item.road_distance }} km</td>
-                        <td>TZS {{ item.fare }}</td>
+                        <td>{{ item.peak_hours }}</td>
+                        <td>{{ item.average_speed }}</td>
+                        <td>{{ item.travel_time }}</td>
+                        <td>{{ item.fare }}</td>
+                        <td>{{ item.landmark_nearby }}</td>
+                        <td>{{ item.road_type }}</td>
+                        <td>{{ item.traffic_lights_count }}</td>
+                        <td>{{ item.route_type }}</td>
+                        <td>{{ item.congestion_level }}</td>
+                        <td>{{ item.passenger_capacity }}</td>
+                        <td>{{ item.alternative_routes }}</td>
+                        <td>{{ item.bus_station_location }}</td>
+                        <td>{{ item.brt_station_location }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <div class="mt-3">
-            <p class="text-success">Successfully imported {{ imported_data|length }} records.</p>
-        </div>
+        <form method="post" enctype="multipart/form-data" class="mt-3">
+            {% csrf_token %}
+            <input type="hidden" name="file" value="{{ file_name }}">
+            <button type="submit" name="confirm" value="1" class="btn btn-success">
+                <i class="fas fa-check me-2"></i>Confirm Import
+            </button>
+            <a href="{% url 'admin_panel:import_data' %}" class="btn btn-secondary">
+                <i class="fas fa-times me-2"></i>Cancel
+            </a>
+        </form>
     </div>
 </div>
 {% endif %}
@@ -71,29 +107,51 @@
         <h6>CSV Format</h6>
         <p>Your CSV file should have the following columns:</p>
         <ul>
-            <li>road_name</li>
-            <li>route_name</li>
-            <li>bus_station</li>
-            <li>brt_station</li>
-            <li>road_distance</li>
-            <li>peak_hours</li>
-            <li>average_speed</li>
-            <li>travel_time</li>
-            <li>fare</li>
-            <li>road_type</li>
+            <li>road_name (text)</li>
+            <li>road_distance (number)</li>
+            <li>route_name (text)</li>
+            <li>bus_station (text)</li>
+            <li>brt_station (text)</li>
+            <li>peak_hours (text)</li>
+            <li>average_speed (number)</li>
+            <li>travel_time (number)</li>
+            <li>fare (number)</li>
+            <li>landmark_nearby (text)</li>
+            <li>road_type (text)</li>
+            <li>traffic_lights_count (number)</li>
+            <li>route_type (text)</li>
+            <li>congestion_level (text)</li>
+            <li>passenger_capacity (number)</li>
+            <li>alternative_routes (text)</li>
+            <li>bus_station_location (text)</li>
+            <li>brt_station_location (text)</li>
+            <li>geojson_data (text)</li>
         </ul>
 
         <h6>JSON Format</h6>
         <p>Your JSON file should follow this structure:</p>
         <pre><code>{
     "transportation_data": {
-        "columns": ["road_name", "route_name", "bus_station", "brt_station", "road_distance", "fare", ...],
+        "columns": [
+            "road_name", "road_distance", "route_name", "bus_station",
+            "brt_station", "peak_hours", "average_speed", "travel_time",
+            "fare", "landmark_nearby", "road_type", "traffic_lights_count",
+            "route_type", "congestion_level", "passenger_capacity",
+            "alternative_routes", "bus_station_location", "brt_station_location",
+            "geojson_data"
+        ],
         "data": [
-            ["Road 1", "Route 1", "Station 1", "BRT 1", 5.2, 1000],
-            ["Road 2", "Route 2", "Station 2", "BRT 2", 3.8, 800]
+            ["Road 1", 5.2, "Route 1", "Station 1", "BRT 1", "07:00-09:00", 
+             40, 15, 1000, "Mall", "Highway", 3, "BRT", "Medium", 200,
+             "Alt Route 1, Alt Route 2", "-6.8123,39.2891", "-6.8124,39.2892",
+             "{\"type\":\"Feature\",\"geometry\":{...}}"],
+            ["Road 2", 3.8, "Route 2", "Station 2", "BRT 2", "17:00-19:00",
+             35, 12, 800, "Park", "Street", 2, "Bus", "Low", 150,
+             "Alt Route 3", "-6.8125,39.2893", "-6.8126,39.2894",
+             "{\"type\":\"Feature\",\"geometry\":{...}}"]
         ]
     }
 }</code></pre>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

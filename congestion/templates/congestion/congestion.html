@@ -4,513 +4,291 @@
 {% block title %}Traffic Congestion Analysis - Tanzania Transport{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <style>
-.congestion-container {
-    max-width: 1400px;
+.back-button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background-color: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    margin: 2rem;
+}
+
+.back-button:hover {
+    background-color: #5a6268;
+    color: white;
+    text-decoration: none;
+}
+
+.analysis-container {
+    max-width: 800px;
     margin: 0 auto;
     padding: 2rem;
 }
 
-.page-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.page-title {
-    font-size: 2.5rem;
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-}
-
-.subtitle {
-    color: #666;
-    font-size: 1.1rem;
-}
-
-.analysis-grid {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 2rem;
-}
-
-.sidebar {
-    background: #fff;
+.analysis-form {
+    background: white;
+    padding: 2rem;
     border-radius: 10px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    height: fit-content;
-}
-
-.main-content {
-    background: #fff;
-    border-radius: 10px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.map-container {
-    position: relative;
-    height: 400px;
-    border-radius: 8px;
-    overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     margin-bottom: 2rem;
 }
 
-#map {
-    height: 100%;
-    width: 100%;
-    border-radius: 8px;
+.form-group {
+    margin-bottom: 1.5rem;
 }
 
-.congestion-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.stat-card {
-    background: white;
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.stat-title {
-    font-size: 0.9rem;
-    color: #666;
+.form-group label {
+    display: block;
     margin-bottom: 0.5rem;
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: bold;
     color: #2c3e50;
-}
-
-.stat-change {
-    font-size: 0.8rem;
-    color: #28a745;
-}
-
-.stat-change.negative {
-    color: #dc3545;
-}
-
-.chart-container {
-    background: white;
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    margin-bottom: 2rem;
-}
-
-.chart-title {
-    font-size: 1.2rem;
-    color: #2c3e50;
-    margin-bottom: 1rem;
-}
-
-.hotspots-list {
-    background: white;
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.hotspot-item {
-    padding: 1rem;
-    border-bottom: 1px solid #eee;
-}
-
-.hotspot-item:last-child {
-    border-bottom: none;
-}
-
-.hotspot-name {
-    font-weight: bold;
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-}
-
-.hotspot-metrics {
-    display: flex;
-    gap: 1rem;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.congestion-level {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.875rem;
     font-weight: 500;
 }
 
-.level-high {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.level-medium {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.level-low {
-    background: #d4edda;
-    color: #155724;
-}
-
-.filter-section {
-    margin-bottom: 1rem;
-}
-
-.filter-section label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #666;
-}
-
-.filter-section select {
+.form-control {
     width: 100%;
-    padding: 0.5rem;
+    padding: 0.75rem;
     border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 1rem;
+    border-radius: 5px;
+    font-size: 1rem;
 }
 
-.time-range {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+.btn-predict {
+    background-color: #007bff;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
 }
 
-.time-range input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+.btn-predict:hover {
+    background-color: #0056b3;
 }
 
-.predictions-section {
-    margin-top: 2rem;
-}
-
-.prediction-card {
+.prediction-result {
+    display: none;
     background: white;
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    margin-bottom: 1rem;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.prediction-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.prediction-title {
-    font-weight: bold;
+.result-header {
+    font-size: 1.5rem;
     color: #2c3e50;
+    margin-bottom: 1rem;
 }
 
-.prediction-time {
-    color: #666;
-    font-size: 0.9rem;
+.confidence-bar {
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem 0;
 }
 
-.prediction-details {
-    font-size: 0.9rem;
-    color: #666;
+.confidence-fill {
+    height: 100%;
+    background: #007bff;
+    transition: width 0.3s ease;
 }
 
-.prediction-metrics {
+.confidence-scores {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 1rem;
     margin-top: 1rem;
 }
 
-.metric-item {
-    text-align: center;
-    padding: 0.5rem;
+.score-item {
     background: #f8f9fa;
-    border-radius: 4px;
+    padding: 1rem;
+    border-radius: 5px;
+    text-align: center;
 }
 
-.metric-value {
-    font-weight: bold;
+.score-label {
+    font-weight: 500;
     color: #2c3e50;
+    margin-bottom: 0.5rem;
 }
 
-.metric-label {
-    font-size: 0.8rem;
-    color: #666;
+.score-value {
+    color: #007bff;
+    font-size: 1.25rem;
+}
+
+.loading {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+}
+
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <h1 class="text-center mb-4">Traffic Congestion Analysis</h1>
-            <p class="text-center text-muted">Analysis of traffic patterns and congestion based on historical data</p>
-        </div>
-    </div>
+<div class="container">
+    <a href="{% url 'congestion:index' %}" class="back-button">
+        <i class="fas fa-arrow-left"></i> Back to Overview
+    </a>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Average Traffic Level</h5>
-                    <h2 class="card-text">{{ avg_traffic_level }}</h2>
-                    <p class="text-muted">Based on traffic records</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Active Stations</h5>
-                    <h2 class="card-text">{{ active_stations_count }}</h2>
-                    <p class="text-muted">Currently operational</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Peak Hours</h5>
-                    <h2 class="card-text">{{ peak_hours }}</h2>
-                    <p class="text-muted">Most congested times</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Total Routes</h5>
-                    <h2 class="card-text">{{ total_routes }}</h2>
-                    <p class="text-muted">Active transport routes</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="analysis-container">
+        <h1 class="text-center mb-4">Neural Network Traffic Analysis</h1>
+        <p class="text-center text-muted mb-4">Use our Multi-Layer Perceptron model to predict congestion levels based on road conditions</p>
 
-    <!-- Main Analysis Section -->
-    <div class="row">
-        <!-- Map Section -->
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Traffic Congestion Map</h5>
-                    <div id="map" style="height: 400px;"></div>
+        <div class="analysis-form">
+            <form id="predictionForm">
+                <div class="form-group">
+                    <label for="road_distance">Road Distance (km)</label>
+                    <input type="number" step="0.1" class="form-control" id="road_distance" required>
                 </div>
-            </div>
-
-            <!-- Peak Hours Chart -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Peak Hours Analysis</h5>
-                    <canvas id="peakHoursChart"></canvas>
+                <div class="form-group">
+                    <label for="average_speed">Average Speed (km/h)</label>
+                    <input type="number" step="0.1" class="form-control" id="average_speed" required>
                 </div>
-            </div>
+                <div class="form-group">
+                    <label for="travel_time">Travel Time (minutes)</label>
+                    <input type="number" step="0.1" class="form-control" id="travel_time" required>
+                </div>
+                <div class="form-group">
+                    <label for="traffic_lights_count">Number of Traffic Lights</label>
+                    <input type="number" class="form-control" id="traffic_lights_count" required>
+                </div>
+                <div class="form-group">
+                    <label for="passenger_capacity">Passenger Capacity</label>
+                    <input type="number" class="form-control" id="passenger_capacity" required>
+                </div>
+                <button type="submit" class="btn-predict w-100">Predict Congestion Level</button>
+            </form>
         </div>
 
-        <!-- Sidebar Controls -->
-        <div class="col-md-4">
-            <!-- Filters -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Analysis Filters</h5>
-                    <form id="analysisFilters">
-                        <div class="mb-3">
-                            <label class="form-label" for="startTime">Start Time</label>
-                            <div class="input-group">
-                                <input type="time" class="form-control" id="startTime" value="06:00" aria-label="Start time">
-                                <input type="time" class="form-control" id="endTime" value="22:00" aria-label="End time">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="dayType">Day Type</label>
-                            <select class="form-select" id="dayType" aria-label="Day type">
-                                <option value="all">All Days</option>
-                                <option value="weekday">Weekdays</option>
-                                <option value="weekend">Weekends</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="congestionLevel">Congestion Level</label>
-                            <select class="form-select" id="congestionLevel" aria-label="Congestion level">
-                                <option value="all">All Levels</option>
-                                <option value="high">High</option>
-                                <option value="medium">Medium</option>
-                                <option value="low">Low</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Update Analysis</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Hotspots List -->
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Current Hotspots</h5>
-                    <div class="list-group">
-                        {% for hotspot in hotspots %}
-                        <div class="list-group-item">
-                            <h6 class="mb-1">{{ hotspot.location }}</h6>
-                            <p class="mb-1">Traffic Level: {{ hotspot.traffic_level }}</p>
-                            <p class="mb-1">Peak Hours: {{ hotspot.peak_hours }}</p>
-                            <span class="badge {% if hotspot.traffic_level == 'high' %}bg-danger{% elif hotspot.traffic_level == 'medium' %}bg-warning{% else %}bg-success{% endif %}">
-                                {{ hotspot.traffic_level|title }} Congestion
-                            </span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Analyzing traffic patterns...</p>
         </div>
-    </div>
 
-    <!-- Predictions Section -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Traffic Predictions</h5>
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Route</th>
-                                    <th>Expected Delay</th>
-                                    <th>Confidence</th>
-                                    <th>Recommended Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for prediction in predictions %}
-                                <tr>
-                                    <td>{{ prediction.time }}</td>
-                                    <td>{{ prediction.route }}</td>
-                                    <td>{{ prediction.delay }} min</td>
-                                    <td>{{ prediction.confidence }}%</td>
-                                    <td>{{ prediction.action }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+        <div class="prediction-result">
+            <h2 class="result-header">Prediction Results</h2>
+            <div class="prediction-content">
+                <p class="mb-2">Predicted Congestion Level: <strong id="predictionLevel"></strong></p>
+                <p class="mb-3">Confidence: <strong id="confidenceScore"></strong>%</p>
+                
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidenceBar"></div>
                 </div>
+
+                <h3 class="mt-4 mb-3">Confidence Scores by Level</h3>
+                <div class="confidence-scores" id="confidenceScores"></div>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Hidden data elements -->
-<script type="application/json" id="congestionData">{{ congestion_data|safe }}</script>
-<script type="application/json" id="predictionData">{{ prediction_data|safe }}</script>
-
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize map
-    const map = L.map('map').setView([-6.8235, 39.2695], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+    const form = document.getElementById('predictionForm');
+    const loading = document.querySelector('.loading');
+    const result = document.querySelector('.prediction-result');
 
-    // Add congestion data to map
-    const congestionData = JSON.parse(document.getElementById('congestionData').textContent);
-    if (congestionData && congestionData.length > 0) {
-        congestionData.forEach(road => {
-            if (road.coordinates) {
-                const color = getCongestionColor(road.traffic_level);
-                L.polyline(road.coordinates, { color: color, weight: 3 })
-                    .bindPopup(`
-                        <div class="popup-content">
-                            <h6>${road.location}</h6>
-                            <p>Traffic Level: ${road.traffic_level}</p>
-                            <p>Peak Hours: ${road.peak_hours}</p>
-                            <p>Status: ${road.is_active ? 'Active' : 'Inactive'}</p>
-                        </div>
-                    `)
-                    .addTo(map);
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Show loading, hide result
+        loading.style.display = 'block';
+        result.style.display = 'none';
+
+        // Get form data
+        const formData = new FormData();
+        formData.append('road_distance', document.getElementById('road_distance').value);
+        formData.append('average_speed', document.getElementById('average_speed').value);
+        formData.append('travel_time', document.getElementById('travel_time').value);
+        formData.append('traffic_lights_count', document.getElementById('traffic_lights_count').value);
+        formData.append('passenger_capacity', document.getElementById('passenger_capacity').value);
+
+        try {
+            const response = await fetch('{% url "congestion:predict" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        });
-    }
 
-    // Initialize peak hours chart
-    const ctx = document.getElementById('peakHoursChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
-            datasets: [{
-                label: 'Traffic Volume',
-                data: [30, 85, 45, 60, 70, 90, 75, 40],
-                borderColor: '#007bff',
-                tension: 0.4
-            }, {
-                label: 'Average Speed',
-                data: [65, 25, 45, 40, 35, 20, 30, 55],
-                borderColor: '#28a745',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Peak Hours Analysis'
+            const data = await response.json();
+
+            // Update prediction results
+            document.getElementById('predictionLevel').textContent = data.prediction;
+            const mainConfidence = Math.min(parseFloat(data.confidence), 99.9).toFixed(1);
+            document.getElementById('confidenceScore').textContent = mainConfidence;
+            document.getElementById('confidenceBar').style.width = mainConfidence + '%';
+
+            // Update confidence scores
+            const scoresContainer = document.getElementById('confidenceScores');
+            scoresContainer.innerHTML = '';
+            for (const [label, score] of Object.entries(data.confidence_scores)) {
+                const formattedScore = Math.min(parseFloat(score), 99.9).toFixed(1);
+                const scoreColor = label.toLowerCase() === 'high' ? '#dc3545' : 
+                                 label.toLowerCase() === 'medium' ? '#ffc107' : '#28a745';
+                scoresContainer.innerHTML += `
+                    <div class="score-item">
+                        <div class="score-label">${label}</div>
+                        <div class="score-value" style="color: ${scoreColor}">${formattedScore}%</div>
+                    </div>
+                `;
+            }
+
+            // Hide loading, show result
+            loading.style.display = 'none';
+            result.style.display = 'block';
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while making the prediction. Please try again.');
+            loading.style.display = 'none';
+        }
+    });
+
+    // Function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
             }
         }
-    });
-
-    // Form submission handler
-    document.getElementById('analysisFilters').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = {
-            startTime: document.getElementById('startTime').value,
-            endTime: document.getElementById('endTime').value,
-            dayType: document.getElementById('dayType').value,
-            congestionLevel: document.getElementById('congestionLevel').value
-        };
-        
-        // Here you would typically make an API call to update the analysis
-        console.log('Updating analysis with filters:', formData);
-    });
-
-    function getCongestionColor(level) {
-        switch(level.toLowerCase()) {
-            case 'high':
-            case 'severe':
-                return '#dc3545';
-            case 'medium':
-                return '#ffc107';
-            case 'low':
-                return '#28a745';
-            default:
-                return '#6c757d';
-        }
+        return cookieValue;
     }
 });
 </script>
-{% endblock %} 
+{% endblock %}

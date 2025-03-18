@@ -4,6 +4,7 @@ from . import views
 app_name = 'congestion'  # Add namespace
 
 urlpatterns = [
-    path('', views.congestion, name='congestion'),
-    path('analysis/', views.analysis, name='analysis'),
-    path('congestion_map/', views.congestion_map, name='congestion_map')]
+    path('', views.index, name='index'),
+    path('details/', views.congestion, name='details'),
+    path('details/predict/', views.get_ml_prediction, name='predict'),
+]

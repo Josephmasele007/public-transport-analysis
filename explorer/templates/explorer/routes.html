@@ -1,45 +1,294 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dar es Salaam Wards Map</title>
+{% extends 'base.html' %}
     {% load static %}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+{% block title %}Routes - Tanzania Transport Analysis{% endblock %}
+
+{% block extra_css %}
     <style>
-        #map {
-            height: 600px;
-            width: 100%;
+.route-card {
+    transition: transform 0.2s;
+}
+
+.route-card:hover {
+    transform: translateY(-5px);
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: white;
+}
+
+.filter-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.nav-buttons {
+    margin-bottom: 2rem;
+}
+
+.nav-button {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    margin-right: 1rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-button.map {
+    background: #6c757d;
+    color: white;
+}
+
+.nav-button.map:hover {
+    background: #5a6268;
+    color: white;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.nav-button.roads {
+    background: #28a745;
+    color: white;
+}
+
+.nav-button.roads:hover {
+    background: #218838;
+    color: white;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.nav-button i {
+    margin-right: 8px;
+}
+
+.station-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    margin: 0.2rem;
+    border-radius: 20px;
+}
+
+.bus-station {
+    background-color: #28a745;
+    color: white;
+}
+
+.brt-station {
+    background-color: #007bff;
+    color: white;
+}
+
+.peak-hours {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Improved pagination styles */
+.pagination {
+    margin: 2rem 0;
+}
+
+.pagination .page-item .page-link {
+    padding: 0.75rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 4px;
+    color: #007bff;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.pagination .page-item .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #0056b3;
+}
+
+.nav-buttons-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.nav-buttons-group {
+    display: flex;
+    gap: 1rem;
         }
     </style>
-</head>
-<body>
+{% endblock %}
 
-    <h2>Dar es Salaam Wards Map</h2>
-    <div id="map"></div>
+{% block content %}
+<div class="container">
+    <!-- Improved Navigation Buttons -->
+    <div class="nav-buttons-container">
+        <div class="nav-buttons-group">
+            <a href="{% url 'explorer:index' %}" class="nav-button map">
+                <i class="fas fa-map"></i> Map View
+            </a>
+        </div>
+        <div class="nav-buttons-group">
+            <a href="{% url 'explorer:roads' %}" class="nav-button roads">
+                <i class="fas fa-road"></i> View Roads
+            </a>
+        </div>
+    </div>
 
-    <script>
-        var map = L.map('map').setView([-6.8, 39.2], 11);  // Center on Dar es Salaam
+    <h1 class="mb-4">Transport Routes</h1>
+    
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Routes</h5>
+                    <h2 class="card-text">{{ total_routes }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h5 class="card-title">Average Fare</h5>
+                    <h2 class="card-text">{{ avg_fare }} TZS</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h5 class="card-title">Bus Stations</h5>
+                    <h2 class="card-text">{{ total_bus_stations }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h5 class="card-title">BRT Stations</h5>
+                    <h2 class="card-text">{{ total_brt_stations }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // Load OpenStreetMap layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="routeType" class="form-label">Route Type</label>
+                <select name="route_type" id="routeType" class="form-select">
+                    <option value="">All Types</option>
+                    {% for type in route_types %}
+                    <option value="{{ type }}" {% if selected_type == type %}selected{% endif %}>{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="fareRange" class="form-label">Fare Range</label>
+                <select name="fare_range" id="fareRange" class="form-select">
+                    <option value="">All Fares</option>
+                    <option value="0-1000" {% if selected_fare == "0-1000" %}selected{% endif %}>0-1000 TZS</option>
+                    <option value="1001-2000" {% if selected_fare == "1001-2000" %}selected{% endif %}>1001-2000 TZS</option>
+                    <option value="2001+" {% if selected_fare == "2001+" %}selected{% endif %}>2001+ TZS</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+            </div>
+        </form>
+    </div>
 
-        // Load GeoJSON Data
-        fetch("{% static 'geojson/Dar_es_salaam_wards.geojson' %}")
-        .then(response => response.json())
-        .then(data => {
-            L.geoJSON(data, {
-                style: {
-                    color: "blue",
-                    weight: 2,
-                    fillOpacity: 0.3
-                }
-            }).addTo(map);
-        });
-    </script>
+    <!-- Route List -->
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for route in routes %}
+        <div class="col">
+            <div class="card h-100 route-card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ route.route_name }}</h5>
+                    <div class="mb-3">
+                        <span class="station-badge bus-station">{{ route.bus_station }}</span>
+                        <span class="station-badge brt-station">{{ route.brt_station }}</span>
+                    </div>
+                    <p class="card-text">
+                        <strong>Type:</strong> {{ route.route_type }}<br>
+                        <strong>Distance:</strong> {{ route.road_distance }} km<br>
+                        <strong>Travel Time:</strong> {{ route.travel_time }} min<br>
+                        <strong>Fare:</strong> {{ route.fare }} TZS<br>
+                        <strong>Peak Hours:</strong> <span class="peak-hours">{{ route.peak_hours }}</span>
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted">Congestion Level: {{ route.congestion_level }}</small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">No routes found matching the selected criteria.</div>
+        </div>
+        {% endfor %}
+    </div>
 
-</body>
-</html>
+    <!-- Improved Pagination -->
+    {% if routes.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if routes.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1" aria-label="First">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ routes.previous_page_number }}" aria-label="Previous">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in routes.paginator.page_range %}
+                {% if routes.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > routes.number|add:'-3' and num < routes.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if routes.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ routes.next_page_number }}" aria-label="Next">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ routes.paginator.num_pages }}" aria-label="Last">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

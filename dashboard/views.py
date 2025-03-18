@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.db.models import Avg, Count
 from django.core.paginator import Paginator
-from .models import TransportationData  # Update this import
+from .models import TransportData  # Updated import
 import json
 
 def dashboard(request):
@@ -12,7 +12,7 @@ def dashboard(request):
         page = request.GET.get('page', 1)
 
         # Base queryset
-        routes = TransportationData.objects.all()
+        routes = TransportData.objects.all()
 
         # Apply filters
         if search_query:
@@ -32,10 +32,10 @@ def dashboard(request):
         avg_travel_time = routes.aggregate(Avg('travel_time'))['travel_time__avg'] or 0
 
         # Get unique road types for filter dropdown
-        road_types = TransportationData.objects.values_list('road_type', flat=True).distinct()
+        road_types = TransportData.objects.values_list('road_type', flat=True).distinct()
 
         # Prepare data for road type distribution chart
-        road_type_stats = TransportationData.objects.values('road_type').annotate(
+        road_type_stats = TransportData.objects.values('road_type').annotate(
             count=Count('id')
         ).order_by('road_type')
 
@@ -44,7 +44,7 @@ def dashboard(request):
 
         # Prepare data for fare vs distance chart - Enhanced version
         fare_distance_stats = (
-            TransportationData.objects
+            TransportData.objects
             .values('road_distance')
             .annotate(avg_fare=Avg('fare'))
             .order_by('road_distance')

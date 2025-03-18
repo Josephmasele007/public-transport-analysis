@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Congestion Analysissss - Tanzania Transport Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+.congestion-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.search-filter-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.filter-select {
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    background: white;
+}
+
+.roads-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.road-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.road-card:hover {
+    transform: translateY(-5px);
+}
+
+.road-name {
+    font-size: 1.25rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.road-type {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #e9ecef;
+    border-radius: 15px;
+    font-size: 0.875rem;
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.road-details {
+    margin-bottom: 1rem;
+}
+
+.road-detail-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    color: #666;
+}
+
+.road-detail-item i {
+    width: 20px;
+    margin-right: 0.5rem;
+    color: #007bff;
+}
+
+.congestion-level {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.congestion-low {
+    background: #d4edda;
+    color: #155724;
+}
+
+.congestion-medium {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.congestion-high {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.pagination-container {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-button:hover {
+    background: #f8f9fa;
+    color: #007bff;
+    border-color: #007bff;
+}
+
+.pagination-button.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.pagination-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-button i {
+    font-size: 0.875rem;
+}
+
+.pagination-info {
+    color: #666;
+    font-size: 0.875rem;
+    margin: 0 1rem;
+}
+
+.distribution-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.distribution-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.distribution-title {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-weight: bold;
+}
+
+.distribution-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.distribution-label {
+    color: #495057;
+}
+
+.distribution-value {
+    font-weight: 500;
+    color: #007bff;
+}
+
+.action-button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    margin: 1rem 0;
+}
+
+.action-button:hover {
+    background-color: #0056b3;
+    color: white;
+    text-decoration: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="congestion-container">
+    <div class="page-header">
+        <h1 class="page-title">Congestion Analysis</h1>
+        <p class="subtitle">Analyze traffic congestion patterns across Tanzania's road network</p>
+        <a href="{% url 'congestion:details' %}" class="action-button">View Detailed Analysis</a>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.avg_speed|floatformat:1 }} km/h</div>
+            <div class="stat-label">Average Speed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_traffic_lights }}</div>
+            <div class="stat-label">Total Traffic Lights</div>
+        </div>
+    </div>
+
+    <div class="distribution-container">
+        <div class="distribution-card">
+            <h3 class="distribution-title">Congestion Level Distribution</h3>
+            {% for level in congestion_distribution %}
+            <div class="distribution-item">
+                <span class="distribution-label">{{ level.congestion_level }}</span>
+                <span class="distribution-value">{{ level.count }} roads</span>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="distribution-card">
+            <h3 class="distribution-title">Road Type Analysis</h3>
+            {% for type in road_type_stats %}
+            <div class="distribution-item">
+                <span class="distribution-label">{{ type.road_type }}</span>
+                <span class="distribution-value">{{ type.avg_speed|floatformat:1 }} km/h avg</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="search-filter-container">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search roads by name or alternative routes..." 
+                   value="{{ search_query }}" aria-label="Search roads">
+        </div>
+        <select class="filter-select" id="roadTypeFilter" aria-label="Filter by road type">
+            <option value="">All Road Types</option>
+            {% for type in road_types %}
+            <option value="{{ type }}" {% if type == selected_road_type %}selected{% endif %}>{{ type }}</option>
+            {% endfor %}
+        </select>
+        <select class="filter-select" id="congestionFilter" aria-label="Filter by congestion level">
+            <option value="">All Congestion Levels</option>
+            {% for level in congestion_levels %}
+            <option value="{{ level }}" {% if level == selected_congestion %}selected{% endif %}>{{ level }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="roads-grid">
+        {% for road in roads %}
+        <div class="road-card">
+            <h2 class="road-name">{{ road.road_name }}</h2>
+            <span class="road-type">{{ road.road_type }}</span>
+            
+            <div class="road-details">
+                <div class="road-detail-item">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Average Speed: {{ road.average_speed|floatformat:1 }} km/h</span>
+                </div>
+                <div class="road-detail-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Peak Hours: {{ road.peak_hours }}</span>
+                </div>
+                <div class="road-detail-item">
+                    <i class="fas fa-traffic-light"></i>
+                    <span>Traffic Lights: {{ road.traffic_lights_count }}</span>
+                </div>
+                <div class="road-detail-item">
+                    <i class="fas fa-random"></i>
+                    <span>Alternative Routes: {{ road.alternative_routes }}</span>
+                </div>
+            </div>
+
+            <span class="congestion-level congestion-{{ road.congestion_level|lower }}">
+                {{ road.congestion_level }} Congestion
+            </span>
+        </div>
+        {% empty %}
+        <div class="no-roads">
+            No roads found matching your criteria.
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if roads.paginator.num_pages > 1 %}
+    <div class="pagination-container">
+        {% if roads.has_previous %}
+        <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_road_type %}&road_type={{ selected_road_type }}{% endif %}{% if selected_congestion %}&congestion={{ selected_congestion }}{% endif %}" 
+           class="pagination-button">
+            <i class="fas fa-angle-double-left"></i>
+            First
+        </a>
+        <a href="?page={{ roads.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_road_type %}&road_type={{ selected_road_type }}{% endif %}{% if selected_congestion %}&congestion={{ selected_congestion }}{% endif %}" 
+           class="pagination-button">
+            <i class="fas fa-angle-left"></i>
+            Previous
+        </a>
+        {% endif %}
+
+        <div class="pagination-info">
+            {% for num in roads.paginator.page_range %}
+                {% if num == roads.number %}
+                    <span class="pagination-button active">{{ num }}</span>
+                {% elif num > roads.number|add:'-3' and num < roads.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_road_type %}&road_type={{ selected_road_type }}{% endif %}{% if selected_congestion %}&congestion={{ selected_congestion }}{% endif %}" 
+                       class="pagination-button">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if roads.has_next %}
+        <a href="?page={{ roads.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_road_type %}&road_type={{ selected_road_type }}{% endif %}{% if selected_congestion %}&congestion={{ selected_congestion }}{% endif %}" 
+           class="pagination-button">
+            Next
+            <i class="fas fa-angle-right"></i>
+        </a>
+        <a href="?page={{ roads.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_road_type %}&road_type={{ selected_road_type }}{% endif %}{% if selected_congestion %}&congestion={{ selected_congestion }}{% endif %}" 
+           class="pagination-button">
+            Last
+            <i class="fas fa-angle-double-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const roadTypeFilter = document.getElementById('roadTypeFilter');
+    const congestionFilter = document.getElementById('congestionFilter');
+
+    function updateFilters() {
+        const currentUrl = new URL(window.location.href);
+        
+        // Update search
+        if (searchInput.value) {
+            currentUrl.searchParams.set('search', searchInput.value);
+        } else {
+            currentUrl.searchParams.delete('search');
+        }
+        
+        // Update road type
+        if (roadTypeFilter.value) {
+            currentUrl.searchParams.set('road_type', roadTypeFilter.value);
+        } else {
+            currentUrl.searchParams.delete('road_type');
+        }
+        
+        // Update congestion level
+        if (congestionFilter.value) {
+            currentUrl.searchParams.set('congestion', congestionFilter.value);
+        } else {
+            currentUrl.searchParams.delete('congestion');
+        }
+        
+        // Reset to first page
+        currentUrl.searchParams.delete('page');
+        
+        window.location.href = currentUrl.toString();
+    }
+
+    // Add event listeners
+    searchInput.addEventListener('input', function() {
+        if (this.value.length >= 3 || this.value.length === 0) {
+            updateFilters();
+        }
+    });
+
+    roadTypeFilter.addEventListener('change', updateFilters);
+    congestionFilter.addEventListener('change', updateFilters);
+});
+</script>
+{% endblock %} 

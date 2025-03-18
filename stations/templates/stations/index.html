@@ -27,6 +27,32 @@
     font-size: 1.1rem;
 }
 
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.stat-card {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
 .stations-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -148,6 +174,56 @@
     color: #666;
     font-size: 1.1rem;
 }
+
+/* Pagination Styles */
+.pagination-container {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-button:hover {
+    background: #f8f9fa;
+    color: #007bff;
+    border-color: #007bff;
+}
+
+.pagination-button.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.pagination-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-button i {
+    font-size: 0.875rem;
+}
+
+.pagination-info {
+    color: #666;
+    font-size: 0.875rem;
+    margin: 0 1rem;
+}
 </style>
 {% endblock %}
 
@@ -158,8 +234,27 @@
         <p class="subtitle">Find information about transport stations across Tanzania</p>
     </div>
 
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_stations }}</div>
+            <div class="stat-label">Total Stations</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ bus_station_count }}</div>
+            <div class="stat-label">Bus Stations</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ brt_station_count }}</div>
+            <div class="stat-label">BRT Stations</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ operational_count }}</div>
+            <div class="stat-label">Operational Stations</div>
+        </div>
+    </div>
+
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search stations by name or location...">
+        <input type="text" id="searchInput" placeholder="Search stations by name, location, or landmark...">
     </div>
 
     <div class="filter-section">
@@ -172,9 +267,9 @@
 
     <div class="stations-grid">
         {% for station in stations %}
-        <div class="station-card" data-type="{{ station.station_type }}" data-status="{{ station.is_operational|yesno:'operational,non-operational' }}">
+        <div class="station-card" data-type="{{ station.type|lower }}" data-status="{{ station.is_operational|yesno:'operational,non-operational' }}">
             <h2 class="station-name">{{ station.name }}</h2>
-            <span class="station-type">{{ station.get_station_type_display }}</span>
+            <span class="station-type">{{ station.type }}</span>
             
             <div class="station-details">
                 <div class="station-detail-item">
@@ -182,12 +277,20 @@
                     <span>{{ station.location }}</span>
                 </div>
                 <div class="station-detail-item">
+                    <i class="fas fa-route"></i>
+                    <span>Route: {{ station.route }}</span>
+                </div>
+                <div class="station-detail-item">
                     <i class="fas fa-users"></i>
                     <span>Capacity: {{ station.capacity }}</span>
                 </div>
                 <div class="station-detail-item">
                     <i class="fas fa-clock"></i>
-                    <span>{{ station.opening_time|time:"H:i" }} - {{ station.closing_time|time:"H:i" }}</span>
+                    <span>Peak Hours: {{ station.peak_hours }}</span>
+                </div>
+                <div class="station-detail-item">
+                    <i class="fas fa-landmark"></i>
+                    <span>Nearby: {{ station.landmark }}</span>
                 </div>
             </div>
 
@@ -201,6 +304,47 @@
         </div>
         {% endfor %}
     </div>
+
+    {% if stations.paginator.num_pages > 1 %}
+    <div class="pagination-container">
+        {% if stations.has_previous %}
+        <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}{% if filter_status != 'all' %}&status={{ filter_status }}{% endif %}" 
+           class="pagination-button">
+            <i class="fas fa-angle-double-left"></i>
+            First
+        </a>
+        <a href="?page={{ stations.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}{% if filter_status != 'all' %}&status={{ filter_status }}{% endif %}" 
+           class="pagination-button">
+            <i class="fas fa-angle-left"></i>
+            Previous
+        </a>
+        {% endif %}
+
+        <div class="pagination-info">
+            {% for num in stations.paginator.page_range %}
+                {% if num == stations.number %}
+                    <span class="pagination-button active">{{ num }}</span>
+                {% elif num > stations.number|add:'-3' and num < stations.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}{% if filter_status != 'all' %}&status={{ filter_status }}{% endif %}" 
+                       class="pagination-button">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if stations.has_next %}
+        <a href="?page={{ stations.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}{% if filter_status != 'all' %}&status={{ filter_status }}{% endif %}" 
+           class="pagination-button">
+            Next
+            <i class="fas fa-angle-right"></i>
+        </a>
+        <a href="?page={{ stations.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}{% if filter_status != 'all' %}&status={{ filter_status }}{% endif %}" 
+           class="pagination-button">
+            Last
+            <i class="fas fa-angle-double-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -209,56 +353,37 @@
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const filterButtons = document.querySelectorAll('.filter-btn');
-    const stationCards = document.querySelectorAll('.station-card');
 
-    // Search functionality
+    // Search functionality with pagination reset
     searchInput.addEventListener('input', function() {
         const searchTerm = this.value.toLowerCase();
-        filterStations(searchTerm);
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('search', searchTerm);
+        currentUrl.searchParams.delete('page'); // Reset to first page
+        window.location.href = currentUrl.toString();
     });
 
-    // Filter functionality
+    // Filter functionality with pagination reset
     filterButtons.forEach(button => {
         button.addEventListener('click', function() {
-            // Update active state
-            filterButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-
-            // Get filter value
             const filterValue = this.dataset.filter;
-            filterStations(searchInput.value.toLowerCase(), filterValue);
+            const currentUrl = new URL(window.location.href);
+            
+            if (filterValue === 'all') {
+                currentUrl.searchParams.delete('type');
+                currentUrl.searchParams.delete('status');
+            } else if (filterValue === 'bus' || filterValue === 'brt') {
+                currentUrl.searchParams.set('type', filterValue);
+                currentUrl.searchParams.delete('status');
+            } else {
+                currentUrl.searchParams.set('status', filterValue);
+                currentUrl.searchParams.delete('type');
+            }
+            
+            currentUrl.searchParams.delete('page'); // Reset to first page
+            window.location.href = currentUrl.toString();
         });
     });
-
-    function filterStations(searchTerm, filterValue = 'all') {
-        stationCards.forEach(card => {
-            const stationName = card.querySelector('.station-name').textContent.toLowerCase();
-            const stationType = card.dataset.type;
-            const stationStatus = card.dataset.status;
-            
-            const matchesSearch = stationName.includes(searchTerm);
-            const matchesFilter = filterValue === 'all' || 
-                                (filterValue === stationType) || 
-                                (filterValue === stationStatus);
-
-            card.style.display = matchesSearch && matchesFilter ? 'block' : 'none';
-        });
-
-        // Show no results message if needed
-        const visibleCards = document.querySelectorAll('.station-card[style="display: block;"]');
-        const noStationsMessage = document.querySelector('.no-stations');
-        
-        if (visibleCards.length === 0) {
-            if (!noStationsMessage) {
-                const message = document.createElement('div');
-                message.className = 'no-stations';
-                message.textContent = 'No stations found. Please try different search criteria.';
-                document.querySelector('.stations-grid').appendChild(message);
-            }
-        } else if (noStationsMessage) {
-            noStationsMessage.remove();
-        }
-    }
 });
 </script>
 {% endblock %} 

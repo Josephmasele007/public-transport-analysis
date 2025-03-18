@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.db.models import Avg, Count
 from django.http import HttpResponse, JsonResponse
-from dashboard.models import TransportationData
+from dashboard.models import TransportData
 from .models import Settings, TrafficRecord
 import csv
 from datetime import datetime, timedelta
@@ -24,6 +24,7 @@ import django
 from stations.models import Station, Route, StationTraffic
 from travel_cost.models import FareCalculator, FareHistory
 from django.views.decorators.http import require_http_methods
+import io
 
 def is_admin(user):
     return user.is_superuser or user.is_staff
@@ -69,8 +70,8 @@ def home(request):
 
     context = {
         'total_users': User.objects.count(),
-        'active_routes': TransportationData.objects.count(),
-        'total_stations': TransportationData.objects.values('bus_station').distinct().count(),
+        'active_routes': TransportData.objects.count(),
+        'total_stations': TransportData.objects.values('bus_station').distinct().count(),
         'reports_count': 0,
         'db_size': f"{db_size:.2f} MB",
         'last_backup': last_backup,
@@ -87,7 +88,7 @@ def data_management(request):
         action = request.POST.get('action')
         if action == 'truncate':
             try:
-                TransportationData.objects.all().delete()
+                TransportData.objects.all().delete()
                 messages.success(request, "All transportation data has been deleted successfully.")
                 return redirect('admin_panel:data_management')
             except Exception as e:
@@ -95,7 +96,7 @@ def data_management(request):
         elif action == 'delete':
             record_id = request.POST.get('record_id')
             try:
-                TransportationData.objects.filter(id=record_id).delete()
+                TransportData.objects.filter(id=record_id).delete()
                 messages.success(request, "Record deleted successfully.")
                 return redirect('admin_panel:data_management')
             except Exception as e:
@@ -105,12 +106,15 @@ def data_management(request):
     tables = [
         {
             'name': 'transportation_data',
-            'model': TransportationData,
+            'model': TransportData,
             'fields': [
                 'id', 'road_name', 'route_name', 'bus_station', 
                 'brt_station', 'road_distance', 'peak_hours', 
                 'average_speed', 'travel_time', 'fare', 
-                'landmark_nearby', 'road_type', 'traffic_lights_count'
+                'landmark_nearby', 'road_type', 'traffic_lights_count',
+                'route_type', 'congestion_level', 'passenger_capacity',
+                'alternative_routes', 'bus_station_location', 'brt_station_location',
+                'geojson_data'
             ]
         }
     ]
@@ -125,7 +129,7 @@ def data_management(request):
 def delete_record(request, record_id):
     if request.method == 'POST':
         try:
-            TransportationData.objects.filter(id=record_id).delete()
+            TransportData.objects.filter(id=record_id).delete()
             messages.success(request, "Record deleted successfully")
         except Exception as e:
             messages.error(request, f"Error: {str(e)}")
@@ -136,7 +140,7 @@ def delete_record(request, record_id):
 def truncate_table(request):
     if request.method == 'POST':
         try:
-            TransportationData.objects.all().delete()
+            TransportData.objects.all().delete()
             messages.success(request, "Table truncated successfully")
         except Exception as e:
             messages.error(request, f"Error: {str(e)}")
@@ -367,23 +371,30 @@ def restore_backup(request, backup_file):
                 data = json.load(f)
             
             # Clear existing data
-            TransportationData.objects.all().delete()
+            TransportData.objects.all().delete()
             
             # Restore data
             for row in data['transportation_data']['data']:
-                TransportationData.objects.create(
+                TransportData.objects.create(
                     road_name=row[0],
-                    route_name=row[1],
-                    bus_station=row[2],
-                    brt_station=row[3],
-                    road_distance=row[4],
+                    road_distance=float(row[1]),
+                    route_name=row[2],
+                    bus_station=row[3],
+                    brt_station=row[4],
                     peak_hours=row[5],
-                    average_speed=row[6],
-                    travel_time=row[7],
-                    fare=row[8],
+                    average_speed=float(row[6]),
+                    travel_time=float(row[7]),
+                    fare=float(row[8]),
                     landmark_nearby=row[9],
                     road_type=row[10],
-                    traffic_lights_count=row[11]
+                    traffic_lights_count=int(row[11]),
+                    route_type=row[12],
+                    congestion_level=row[13],
+                    passenger_capacity=int(row[14]),
+                    alternative_routes=row[15],
+                    bus_station_location=row[16],
+                    brt_station_location=row[17],
+                    geojson_data=row[18]
                 )
             
             messages.success(request, 'Backup restored successfully')
@@ -405,31 +416,220 @@ def delete_backup(request, backup_file):
 
 @login_required
 @user_passes_test(is_admin)
-def import_data(request):
-    if request.method == 'POST':
-        file = request.FILES.get('file')
-        if file:
-            try:
-                if file.name.endswith('.csv'):
-                    import_csv(file)
-                elif file.name.endswith('.json'):
-                    import_json(file)
-                messages.success(request, 'Data imported successfully')
-            except Exception as e:
-                messages.error(request, f'Error importing data: {str(e)}')
-    
-    return render(request, 'admin_panel/import_data.html')
+def export_data(request):
+    try:
+        response = HttpResponse(content_type='application/json')
+        response['Content-Disposition'] = 'attachment; filename="transportation_data.json"'
+        
+        data = serialize_data()
+        json.dump(data, response, indent=4)
+        
+        messages.success(request, 'Data exported successfully')
+        return response
+    except Exception as e:
+        messages.error(request, f'Error exporting data: {str(e)}')
+        return redirect('admin_panel:data_management')
 
 @login_required
 @user_passes_test(is_admin)
-def export_data(request):
-    response = HttpResponse(content_type='application/json')
-    response['Content-Disposition'] = 'attachment; filename="transportation_data.json"'
+def import_data(request):
+    context = {}
+    if request.method == 'POST':
+        if 'preview' in request.POST:
+            file = request.FILES.get('file')
+            if file:
+                try:
+                    preview_data = []
+                    if file.name.endswith('.csv'):
+                        preview_data = preview_csv(file)
+                    elif file.name.endswith('.json'):
+                        preview_data = preview_json(file)
+                    else:
+                        messages.error(request, 'Unsupported file format. Please use CSV or JSON.')
+                        return redirect('admin_panel:import_data')
+                    
+                    # Store file content in session for later use
+                    request.session['file_content'] = file.read().decode('utf-8')
+                    request.session['file_type'] = 'csv' if file.name.endswith('.csv') else 'json'
+                    
+                    context['imported_data'] = preview_data[:10]
+                    context['total_rows'] = len(preview_data)
+                    context['file_name'] = file.name
+                    messages.info(request, f'Previewing {len(preview_data)} records. Please confirm to import.')
+                except Exception as e:
+                    messages.error(request, f'Error previewing data: {str(e)}')
+        
+        elif 'confirm' in request.POST:
+            try:
+                file_content = request.session.get('file_content')
+                file_type = request.session.get('file_type')
+                
+                if not file_content or not file_type:
+                    messages.error(request, 'No file data found. Please upload the file again.')
+                    return redirect('admin_panel:import_data')
+                
+                # Create a file-like object from the stored content
+                file = io.StringIO(file_content)
+                
+                if file_type == 'csv':
+                    rows_imported = import_csv(file)
+                else:  # json
+                    file_content = json.loads(file_content)
+                    rows_imported = import_json(file_content)
+                
+                # Clear session data
+                del request.session['file_content']
+                del request.session['file_type']
+                
+                messages.success(request, f'Successfully imported {rows_imported} records')
+                return redirect('admin_panel:data_management')
+            except Exception as e:
+                messages.error(request, f'Error importing data: {str(e)}')
     
-    data = serialize_data()
-    json.dump(data, response, indent=4)
+    return render(request, 'admin_panel/import_data.html', context)
+
+def preview_csv(file):
+    decoded_file = file.read().decode('utf-8')
+    file.seek(0)  # Reset file pointer for later use
+    csv_data = csv.DictReader(decoded_file.splitlines())
+    preview_data = []
     
-    return response
+    required_fields = [
+        'road_name', 'road_distance', 'route_name', 'bus_station', 
+        'brt_station', 'peak_hours', 'average_speed', 'travel_time',
+        'fare', 'landmark_nearby', 'road_type', 'traffic_lights_count',
+        'route_type', 'congestion_level', 'passenger_capacity',
+        'alternative_routes', 'bus_station_location', 'brt_station_location',
+        'geojson_data'
+    ]
+    
+    for row in csv_data:
+        # Validate required fields
+        missing_fields = [field for field in required_fields if field not in row]
+        if missing_fields:
+            raise ValueError(f'Missing required fields: {", ".join(missing_fields)}')
+        
+        # Validate numeric fields
+        try:
+            float(row['road_distance'])
+            float(row['average_speed'])
+            float(row['travel_time'])
+            float(row['fare'])
+            int(row['traffic_lights_count'])
+            int(row['passenger_capacity'])
+        except ValueError:
+            raise ValueError(f'Invalid numeric value in row: {row["road_name"]}')
+        
+        preview_data.append(row)
+    
+    return preview_data
+
+def preview_json(file):
+    data = json.load(file)
+    preview_data = []
+    
+    if 'transportation_data' not in data or 'data' not in data['transportation_data']:
+        raise ValueError('Invalid JSON format. Missing transportation_data or data field.')
+    
+    expected_fields = 19  # Number of fields in TransportData model
+    
+    for row in data['transportation_data']['data']:
+        if len(row) != expected_fields:
+            raise ValueError(f'Invalid number of fields. Expected {expected_fields}, got {len(row)}')
+        
+        # Validate numeric fields
+        try:
+            float(row[1])   # road_distance
+            float(row[6])   # average_speed
+            float(row[7])   # travel_time
+            float(row[8])   # fare
+            int(row[11])    # traffic_lights_count
+            int(row[14])    # passenger_capacity
+        except (ValueError, IndexError):
+            raise ValueError(f'Invalid numeric value in row for road: {row[0]}')
+        
+        preview_data.append({
+            'road_name': row[0],
+            'road_distance': float(row[1]),
+            'route_name': row[2],
+            'bus_station': row[3],
+            'brt_station': row[4],
+            'peak_hours': row[5],
+            'average_speed': float(row[6]),
+            'travel_time': float(row[7]),
+            'fare': float(row[8]),
+            'landmark_nearby': row[9],
+            'road_type': row[10],
+            'traffic_lights_count': int(row[11]),
+            'route_type': row[12],
+            'congestion_level': row[13],
+            'passenger_capacity': int(row[14]),
+            'alternative_routes': row[15],
+            'bus_station_location': row[16],
+            'brt_station_location': row[17],
+            'geojson_data': row[18]
+        })
+    
+    return preview_data
+
+def import_csv(file):
+    csv_data = csv.DictReader(file.splitlines())
+    imported_count = 0
+    
+    for row in csv_data:
+        TransportData.objects.create(
+            road_name=row['road_name'],
+            road_distance=float(row['road_distance']),
+            route_name=row['route_name'],
+            bus_station=row['bus_station'],
+            brt_station=row['brt_station'],
+            peak_hours=row['peak_hours'],
+            average_speed=float(row['average_speed']),
+            travel_time=float(row['travel_time']),
+            fare=float(row['fare']),
+            landmark_nearby=row['landmark_nearby'],
+            road_type=row['road_type'],
+            traffic_lights_count=int(row['traffic_lights_count']),
+            route_type=row['route_type'],
+            congestion_level=row['congestion_level'],
+            passenger_capacity=int(row['passenger_capacity']),
+            alternative_routes=row['alternative_routes'],
+            bus_station_location=row['bus_station_location'],
+            brt_station_location=row['brt_station_location'],
+            geojson_data=row['geojson_data']
+        )
+        imported_count += 1
+    
+    return imported_count
+
+def import_json(data):
+    imported_count = 0
+    
+    for row in data['transportation_data']['data']:
+        TransportData.objects.create(
+            road_name=row[0],
+            road_distance=float(row[1]),
+            route_name=row[2],
+            bus_station=row[3],
+            brt_station=row[4],
+            peak_hours=row[5],
+            average_speed=float(row[6]),
+            travel_time=float(row[7]),
+            fare=float(row[8]),
+            landmark_nearby=row[9],
+            road_type=row[10],
+            traffic_lights_count=int(row[11]),
+            route_type=row[12],
+            congestion_level=row[13],
+            passenger_capacity=int(row[14]),
+            alternative_routes=row[15],
+            bus_station_location=row[16],
+            brt_station_location=row[17],
+            geojson_data=row[18]
+        )
+        imported_count += 1
+    
+    return imported_count
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -640,74 +840,44 @@ def toggle_app(request, app_name):
         messages.success(request, f'App {app_name} toggled successfully')
     return redirect('admin_panel:app_management')
 
-def import_csv(file):
-    decoded_file = file.read().decode('utf-8')
-    csv_data = csv.DictReader(decoded_file.splitlines())
-    
-    for row in csv_data:
-        TransportationData.objects.create(
-            road_name=row['road_name'],
-            route_name=row['route_name'],
-            bus_station=row['bus_station'],
-            brt_station=row['brt_station'],
-            road_distance=float(row['road_distance']),
-            peak_hours=row['peak_hours'],
-            average_speed=float(row['average_speed']),
-            travel_time=float(row['travel_time']),
-            fare=float(row['fare']),
-            landmark_nearby=row['landmark_nearby'],
-            road_type=row['road_type'],
-            traffic_lights_count=int(row['traffic_lights_count'])
-        )
-
-def import_json(file):
-    data = json.load(file)
-    for row in data['transportation_data']['data']:
-        TransportationData.objects.create(
-            road_name=row[0],
-            route_name=row[1],
-            bus_station=row[2],
-            brt_station=row[3],
-            road_distance=float(row[4]),
-            peak_hours=row[5],
-            average_speed=float(row[6]),
-            travel_time=float(row[7]),
-            fare=float(row[8]),
-            landmark_nearby=row[9],
-            road_type=row[10],
-            traffic_lights_count=int(row[11])
-        )
-
 def serialize_data():
+    transport_data = TransportData.objects.all()
     data = {
         'transportation_data': {
             'columns': [
-                'road_name', 'route_name', 'bus_station', 'brt_station',
-                'road_distance', 'peak_hours', 'average_speed', 'travel_time',
-                'fare', 'landmark_nearby', 'road_type', 'traffic_lights_count'
+                'road_name', 'road_distance', 'route_name', 'bus_station', 
+                'brt_station', 'peak_hours', 'average_speed', 'travel_time',
+                'fare', 'landmark_nearby', 'road_type', 'traffic_lights_count',
+                'route_type', 'congestion_level', 'passenger_capacity',
+                'alternative_routes', 'bus_station_location', 'brt_station_location',
+                'geojson_data'
             ],
-            'data': []
+            'data': [
+                [
+                    item.road_name,
+                    float(item.road_distance),
+                    item.route_name,
+                    item.bus_station,
+                    item.brt_station,
+                    item.peak_hours,
+                    float(item.average_speed),
+                    float(item.travel_time),
+                    float(item.fare),
+                    item.landmark_nearby,
+                    item.road_type,
+                    int(item.traffic_lights_count),
+                    item.route_type,
+                    item.congestion_level,
+                    int(item.passenger_capacity),
+                    item.alternative_routes,
+                    item.bus_station_location,
+                    item.brt_station_location,
+                    item.geojson_data
+                ]
+                for item in transport_data
+            ]
         }
     }
-    
-    records = TransportationData.objects.all()
-    for record in records:
-        row = [
-            record.road_name,
-            record.route_name,
-            record.bus_station,
-            record.brt_station,
-            record.road_distance,
-            record.peak_hours,
-            record.average_speed,
-            record.travel_time,
-            record.fare,
-            record.landmark_nearby,
-            record.road_type,
-            record.traffic_lights_count
-        ]
-        data['transportation_data']['data'].append(row)
-    
     return data
 
 @login_required
@@ -718,7 +888,7 @@ def data_types(request):
     Shows different types of data that can be managed.
     """
     context = {
-        'transport_count': TransportationData.objects.count(),
+        'transport_count': TransportData.objects.count(),
         'stations_count': Station.objects.count(),
         'routes_count': Route.objects.count(),
         'traffic_count': StationTraffic.objects.count(),
@@ -865,7 +1035,7 @@ def update_record(request):
     if request.method == 'POST':
         try:
             record_id = request.POST.get('record_id')
-            record = TransportationData.objects.get(id=record_id)
+            record = TransportData.objects.get(id=record_id)
             
             # Update record fields
             record.road_name = request.POST.get('road_name')
@@ -877,7 +1047,7 @@ def update_record(request):
             
             record.save()
             return JsonResponse({'success': True})
-        except TransportationData.DoesNotExist:
+        except TransportData.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Record not found'}, status=404)
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=500)

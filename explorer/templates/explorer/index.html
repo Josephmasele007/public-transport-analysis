@@ -182,34 +182,96 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* Search box styles */
-.search-box {
+/* Nav buttons styles */
+.nav-buttons {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+
+.nav-button {
+    display: block;
+    width: 100%;
+    padding: 1rem;
     margin-bottom: 1rem;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 0.8rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
-}
-
-.search-box button {
-    width: 100%;
-    padding: 0.8rem;
-    background: #007bff;
-    color: white;
     border: none;
     border-radius: 5px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    text-align: center;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: all 0.3s ease;
 }
 
-.search-box button:hover {
-    background: #0056b3;
+.nav-button.roads {
+    background: #28a745;
+    color: white;
 }
+
+.nav-button.roads:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    color: white;
+    text-decoration: none;
+}
+
+.nav-button.routes {
+    background: #007bff;
+    color: white;
+}
+
+.nav-button.routes:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+    color: white;
+    text-decoration: none;
+}
+
+.nav-button.map {
+    background: #6c757d;
+    color: white;
+}
+
+.nav-button.map:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    color: white;
+    text-decoration: none;
+}
+
+.nav-button i {
+    margin-right: 8px;
+}
+
+/* Legend styles */
+.map-legend {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.bus-color { background-color: #28a745; }
+.brt-color { background-color: #007bff; }
 </style>
 {% endblock %}
 
@@ -223,16 +285,21 @@
     <div class="main-grid">
         <!-- Sidebar -->
         <div class="sidebar">
-            <div class="search-box">
-                <input type="text" placeholder="Search for a location..." id="searchInput">
-                <button type="button" id="searchButton">Search</button>
+            <!-- Navigation Buttons -->
+            <div class="nav-buttons">
+                <a href="{% url 'explorer:roads' %}" class="nav-button roads">
+                    <i class="fas fa-road"></i> View Roads Analysis
+                </a>
+                <a href="{% url 'explorer:routes' %}" class="nav-button routes">
+                    <i class="fas fa-route"></i> View Routes Analysis
+                </a>
             </div>
         </div>
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Map Section -->
             <div class="map-container">
+                <!-- Map Controls -->
                 <div class="map-controls">
                     <button class="map-control-btn" id="zoomIn" title="Zoom In">
                         <i class="fas fa-plus"></i>
@@ -244,6 +311,19 @@
                         <i class="fas fa-sync"></i>
                     </button>
                 </div>
+
+                <!-- Map Legend -->
+                <div class="map-legend">
+                    <div class="legend-item">
+                        <div class="legend-color bus-color"></div>
+                        <span>Bus Station</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color brt-color"></div>
+                        <span>BRT Station</span>
+                    </div>
+                </div>
+
                 <div id="map"></div>
             </div>
         </div>
@@ -251,7 +331,7 @@
 </div>
 
 <!-- Hidden data elements -->
-<script type="application/json" id="stationsData">{{ stations|safe }}</script>
+<script type="application/json" id="transportData">{{ transport_data|safe }}</script>
 
 {% endblock %}
 
@@ -262,21 +342,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize map
     const map = L.map('map').setView([-6.8235, 39.2695], 12);
     
-    // Add OpenStreetMap tile layer
+    // Add map layers
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
+        attribution: ' OpenStreetMap contributors',
         maxZoom: 19
     }).addTo(map);
 
-    // Add satellite layer
     const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© Esri',
+        attribution: ' Esri',
         maxZoom: 19
     });
 
-    // Add terrain layer
     const terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenTopoMap contributors',
+        attribution: ' OpenTopoMap contributors',
         maxZoom: 19
     });
 
@@ -291,106 +369,82 @@ document.addEventListener('DOMContentLoaded', function() {
         collapsed: false
     }).addTo(map);
 
-    // Custom marker icon
-    const customIcon = L.divIcon({
-        className: 'custom-marker',
+    // Custom icons
+    const busStationIcon = L.divIcon({
+        className: 'bus-station-marker',
         iconSize: [12, 12],
         iconAnchor: [6, 6]
     });
 
-    // Map controls
-    document.getElementById('zoomIn').addEventListener('click', () => {
-        map.zoomIn();
+    const brtStationIcon = L.divIcon({
+        className: 'brt-station-marker',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
     });
 
-    document.getElementById('zoomOut').addEventListener('click', () => {
-        map.zoomOut();
-    });
+    // Load transport data
+    const transportData = JSON.parse(document.getElementById('transportData').textContent);
+    let markers = L.layerGroup().addTo(map);
 
-    document.getElementById('resetView').addEventListener('click', () => {
-        map.setView([-6.8235, 39.2695], 12);
-    });
+    function updateMarkers(filters = {}) {
+        markers.clearLayers();
+        let visibleCount = 0;
 
-    // Add markers for stations if data is available
-    const stationsData = JSON.parse(document.getElementById('stationsData').textContent);
-    if (stationsData && stationsData.length > 0) {
-        stationsData.forEach(station => {
-            if (station.coordinates && station.coordinates.lat && station.coordinates.lng) {
-                const lat = parseFloat(station.coordinates.lat);
-                const lng = parseFloat(station.coordinates.lng);
-                
-                L.marker([lat, lng], { icon: customIcon })
-                    .bindPopup(`
-                        <div class="popup-content">
-                            <div class="popup-title">${station.name}</div>
-                            <div class="popup-details">
-                                <p><strong>Type:</strong> ${station.get_station_type_display}</p>
-                                <p><strong>Location:</strong> ${station.location}</p>
-                                <p><strong>Status:</strong> ${station.is_operational ? 'Operational' : 'Non-operational'}</p>
-                            </div>
-                        </div>
-                    `)
-                    .addTo(map);
+        transportData.features.forEach(feature => {
+            // Apply filters
+            if (filters.roadType && feature.properties.road_type !== filters.roadType) return;
+            if (filters.routeType && feature.properties.route_type !== filters.routeType) return;
+            if (filters.congestion && feature.properties.congestion_level !== filters.congestion) return;
+
+            // Create markers for both bus and BRT stations
+            if (feature.properties.bus_station_location) {
+                const [lng, lat] = feature.properties.bus_station_location.split(',').map(Number);
+                const marker = L.marker([lat, lng], { icon: busStationIcon })
+                    .bindPopup(createPopupContent(feature, 'bus'));
+                markers.addLayer(marker);
+                visibleCount++;
+            }
+
+            if (feature.properties.brt_station_location) {
+                const [lng, lat] = feature.properties.brt_station_location.split(',').map(Number);
+                const marker = L.marker([lat, lng], { icon: brtStationIcon })
+                    .bindPopup(createPopupContent(feature, 'brt'));
+                markers.addLayer(marker);
+                visibleCount++;
             }
         });
+
+        document.getElementById('visibleMarkers').textContent = visibleCount;
     }
+
+    function createPopupContent(feature, stationType) {
+        const station = stationType === 'bus' ? feature.properties.bus_station : feature.properties.brt_station;
+        return `
+            <div class="popup-content">
+                <div class="popup-title">${station}</div>
+                <div class="popup-details">
+                    <p><strong>Route:</strong> ${feature.properties.route_name}</p>
+                    <p><strong>Road:</strong> ${feature.properties.road_name}</p>
+                    <p><strong>Peak Hours:</strong> ${feature.properties.peak_hours}</p>
+                    <p><strong>Fare:</strong> ${feature.properties.fare} TZS</p>
+                    <p><strong>Travel Time:</strong> ${feature.properties.travel_time} min</p>
+                    <p><strong>Congestion:</strong> ${feature.properties.congestion_level}</p>
+                    <p><strong>Nearby:</strong> ${feature.properties.landmark_nearby || 'N/A'}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // Map controls
+    document.getElementById('zoomIn').addEventListener('click', () => map.zoomIn());
+    document.getElementById('zoomOut').addEventListener('click', () => map.zoomOut());
+    document.getElementById('resetView').addEventListener('click', () => map.setView([-6.8235, 39.2695], 12));
 
     // Add scale control
     L.control.scale({
         imperial: false,
         position: 'bottomleft'
     }).addTo(map);
-
-    // Add attribution control
-    L.control.attribution({
-        position: 'bottomright'
-    }).addTo(map);
-
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    const searchButton = document.getElementById('searchButton');
-
-    function searchLocation() {
-        const searchTerm = searchInput.value;
-        if (searchTerm) {
-            // Using OpenStreetMap Nominatim API for geocoding
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchTerm)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        const location = data[0];
-                        map.setView([location.lat, location.lon], 15);
-                        
-                        // Add a marker for the searched location
-                        L.marker([location.lat, location.lon])
-                            .bindPopup(`
-                                <div class="popup-content">
-                                    <div class="popup-title">${location.display_name}</div>
-                                    <div class="popup-details">
-                                        <p><strong>Type:</strong> ${location.type}</p>
-                                        <p><strong>Latitude:</strong> ${location.lat}</p>
-                                        <p><strong>Longitude:</strong> ${location.lon}</p>
-                                    </div>
-                                </div>
-                            `)
-                            .addTo(map);
-                    } else {
-                        alert('Location not found');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error searching location:', error);
-                    alert('Error searching location');
-                });
-        }
-    }
-
-    searchButton.addEventListener('click', searchLocation);
-    searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchLocation();
-        }
-    });
 });
 </script>
-{% endblock %} 
+{% endblock %}

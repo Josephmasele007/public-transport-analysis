@@ -1,11 +1,268 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roads</title>
-</head>
-<body>
-    <h1>Roads</h1>
-</body>
-</html>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Roads - Tanzania Transport Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+.road-card {
+    transition: transform 0.2s;
+}
+
+.road-card:hover {
+    transform: translateY(-5px);
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+}
+
+.filter-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.nav-buttons {
+    margin-bottom: 2rem;
+}
+
+.nav-button {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    margin-right: 1rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-button.map {
+    background: #6c757d;
+    color: white;
+}
+
+.nav-button.map:hover {
+    background: #5a6268;
+    color: white;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.nav-button.routes {
+    background: #007bff;
+    color: white;
+}
+
+.nav-button.routes:hover {
+    background: #0056b3;
+    color: white;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.nav-button i {
+    margin-right: 8px;
+}
+
+/* Improved pagination styles */
+.pagination {
+    margin: 2rem 0;
+}
+
+.pagination .page-item .page-link {
+    padding: 0.75rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 4px;
+    color: #007bff;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.pagination .page-item .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #0056b3;
+}
+
+.nav-buttons-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.nav-buttons-group {
+    display: flex;
+    gap: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Improved Navigation Buttons -->
+    <div class="nav-buttons-container">
+        <div class="nav-buttons-group">
+            <a href="{% url 'explorer:index' %}" class="nav-button map">
+                <i class="fas fa-map"></i> Map View
+            </a>
+        </div>
+        <div class="nav-buttons-group">
+            <a href="{% url 'explorer:routes' %}" class="nav-button routes">
+                <i class="fas fa-route"></i> View Routes
+            </a>
+        </div>
+    </div>
+
+    <h1 class="mb-4">Road Network Analysis</h1>
+    
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Roads</h5>
+                    <h2 class="card-text">{{ total_roads }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h5 class="card-title">Average Speed</h5>
+                    <h2 class="card-text">{{ avg_speed }} km/h</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Distance</h5>
+                    <h2 class="card-text">{{ total_distance }} km</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h5 class="card-title">Traffic Lights</h5>
+                    <h2 class="card-text">{{ total_traffic_lights }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="roadType" class="form-label">Road Type</label>
+                <select name="road_type" id="roadType" class="form-select">
+                    <option value="">All Types</option>
+                    {% for type in road_types %}
+                    <option value="{{ type }}" {% if selected_type == type %}selected{% endif %}>{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="congestion" class="form-label">Congestion Level</label>
+                <select name="congestion" id="congestion" class="form-select">
+                    <option value="">All Levels</option>
+                    {% for level in congestion_levels %}
+                    <option value="{{ level }}" {% if selected_congestion == level %}selected{% endif %}>{{ level }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Road List -->
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for road in roads %}
+        <div class="col">
+            <div class="card h-100 road-card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ road.road_name }}</h5>
+                    <p class="card-text">
+                        <strong>Type:</strong> {{ road.road_type }}<br>
+                        <strong>Distance:</strong> {{ road.road_distance }} km<br>
+                        <strong>Speed Limit:</strong> {{ road.average_speed }} km/h<br>
+                        <strong>Congestion:</strong> {{ road.congestion_level }}<br>
+                        <strong>Traffic Lights:</strong> {{ road.traffic_lights_count }}
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted">Landmarks: {{ road.landmark_nearby|default:"None" }}</small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">No roads found matching the selected criteria.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Improved Pagination -->
+    {% if roads.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if roads.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1" aria-label="First">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ roads.previous_page_number }}" aria-label="Previous">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in roads.paginator.page_range %}
+                {% if roads.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > roads.number|add:'-3' and num < roads.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if roads.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ roads.next_page_number }}" aria-label="Next">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ roads.paginator.num_pages }}" aria-label="Last">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
