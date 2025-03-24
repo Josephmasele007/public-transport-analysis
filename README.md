@@ -32,7 +32,7 @@ This project aims to optimize public transportation systems in Dar es Salaam, Ta
 ## Tech Stack
 - **Frontend**: Django (Template-based UI)
 - **Backend**: Django Rest Framework (DRF)
-- **Database**: SQLite (Primary)
+- **Database**: SQLite (Primary) and Postgres (Production)
 - **Mapping Tools**: Leaflet.js, Folium, GeoJSON
 - **Data Sources**: OpenStreetMap, WorldPop, NBS Tanzania
 
