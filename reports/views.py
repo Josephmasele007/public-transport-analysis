@@ -5,6 +5,13 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db import models
 from dashboard.models import TransportData
+from .ml.models import TransportML
+from .ml.utils import (
+    calculate_time_based_features,
+    calculate_route_metrics,
+    calculate_station_metrics,
+    calculate_performance_metrics
+)
 import json
 
 def index(request):
@@ -16,208 +23,160 @@ def index(request):
     return render(request, 'reports/index.html', context)
 
 def get_report_data():
-    # Stations data
-    stations = TransportData.objects.values('bus_station', 'brt_station').distinct()
-    bus_stations = TransportData.objects.values('bus_station').distinct().count()
-    brt_stations = TransportData.objects.values('brt_station').distinct().count()
-    total_stations = bus_stations + brt_stations
+    # Initialize ML models
+    ml = TransportML()
     
-    # System load calculation based on congestion level
-    def get_load_value(level):
-        load_mapping = {
-            'Low': 30,
-            'Medium': 60,
-            'High': 90,
-            'Very High': 100
-        }
-        return load_mapping.get(level, 50)
-    
+    # Get data
     transport_data = TransportData.objects.all()
-    current_load = transport_data.annotate(
-        load=models.Case(
-            *[models.When(congestion_level=k, then=models.Value(v)) for k, v in {
-                'Low': 30, 'Medium': 60, 'High': 90, 'Very High': 100
-            }.items()],
-            default=models.Value(50),
-            output_field=models.IntegerField(),
-        )
-    ).aggregate(avg_load=models.Avg('load'))['avg_load'] or 0
+    if not transport_data.exists():
+        return get_empty_report()
     
-    # Peak hours analysis
-    peak_hours_data = transport_data.filter(peak_hours__icontains='yes')
-    peak_load = peak_hours_data.annotate(
-        load=models.Case(
-            *[models.When(congestion_level=k, then=models.Value(v)) for k, v in {
-                'Low': 30, 'Medium': 60, 'High': 90, 'Very High': 100
-            }.items()],
-            default=models.Value(50),
-            output_field=models.IntegerField(),
-        )
-    ).aggregate(peak_load=models.Avg('load'))['peak_load'] or 0
+    # Calculate metrics
+    data_df = calculate_time_based_features(ml.data)
+    route_metrics = calculate_route_metrics(data_df)
+    station_metrics = calculate_station_metrics(data_df)
+    performance_metrics = calculate_performance_metrics(data_df)
     
-    off_peak_data = transport_data.filter(peak_hours__icontains='no')
-    off_peak = off_peak_data.annotate(
-        load=models.Case(
-            *[models.When(congestion_level=k, then=models.Value(v)) for k, v in {
-                'Low': 30, 'Medium': 60, 'High': 90, 'Very High': 100
-            }.items()],
-            default=models.Value(50),
-            output_field=models.IntegerField(),
-        )
-    ).aggregate(off_peak=models.Avg('load'))['off_peak'] or 0
-
-    # Route performance based on average speed
-    avg_speed = transport_data.aggregate(avg=models.Avg('average_speed'))['avg'] or 0
-    max_speed = transport_data.aggregate(max=models.Max('average_speed'))['max'] or 1
-    route_performance = (avg_speed / max_speed * 100) if max_speed > 0 else 0
-    
-    # Cost analysis
-    current_fares = transport_data.aggregate(
-        avg_fare=models.Avg('fare'),
-        min_fare=models.Min('fare'),
-        max_fare=models.Max('fare')
-    )
-    
-    # Prepare data for charts
-    congestion_data = transport_data.values('congestion_level').annotate(
-        count=models.Count('id')
-    ).order_by('congestion_level')
-    
-    route_data = transport_data.values('route_name').annotate(
-        avg_speed=models.Avg('average_speed'),
-        avg_fare=models.Avg('fare'),
-        congestion_count=models.Count('congestion_level')
-    ).order_by('-avg_fare')[:10]
-    
-    # Station data
+    # Get station data with ML insights
     station_data = []
-    for station in stations:
-        bus_data = transport_data.filter(bus_station=station['bus_station']).first()
-        if bus_data:
-            station_data.append({
-                'name': bus_data.bus_station,
-                'type': 'bus',
-                'current_load': get_load_value(bus_data.congestion_level),
-                'wait_time': round(bus_data.travel_time / 2, 1),
-                'status': get_status_class(get_load_value(bus_data.congestion_level))
-            })
+    for station in station_metrics.itertuples():
+        recommendations = ml.get_route_recommendations(station.station)
+        station_data.append({
+            'name': station.station,
+            'type': 'bus' if station.station in data_df['bus_station'].unique() else 'brt',
+            'current_load': round(station.avg_congestion * 33.33, 1),  # Convert 0-3 scale to percentage
+            'wait_time': round(station.avg_travel_time / 2, 1),
+            'status': get_status_class(station.avg_congestion * 33.33),
+            'status_class': f"status-{get_status_class(station.avg_congestion * 33.33)}",
+            'recommendations': recommendations[:3] if recommendations else []
+        })
+    
+    # Get route data with ML insights
+    route_data = []
+    for route in route_metrics.itertuples():
+        predicted_congestion = ml.predict_congestion(route.route_name)
+        peak_performance = ml.predict_peak_performance(route.route_name)
         
-        brt_data = transport_data.filter(brt_station=station['brt_station']).first()
-        if brt_data:
-            station_data.append({
-                'name': brt_data.brt_station,
-                'type': 'brt',
-                'current_load': get_load_value(brt_data.congestion_level),
-                'wait_time': round(brt_data.travel_time / 2, 1),
-                'status': get_status_class(get_load_value(brt_data.congestion_level))
-            })
-
+        route_data.append({
+            'route_name': route.route_name,
+            'avg_speed': round(route.average_speed, 1),
+            'avg_fare': round(route.fare, 2),
+            'predicted_congestion': predicted_congestion,
+            'peak_performance': peak_performance,
+            'efficiency_score': round(route.efficiency_score * 100, 2)
+        })
+    
+    # Get congestion patterns
+    congestion_patterns = ml.analyze_congestion_patterns()
+    
+    # Get station clusters
+    station_clusters = ml.cluster_stations()
+    
     # Prepare chart data
-    congestion_labels = [d['congestion_level'] for d in congestion_data]
-    congestion_values = [d['count'] for d in congestion_data]
+    congestion_data = data_df['congestion_level'].value_counts()
+    route_speeds = route_metrics[['route_name', 'average_speed']].sort_values('average_speed', ascending=False)[:10]
     
-    route_labels = [d['route_name'] for d in route_data]
-    route_costs = [float(d['avg_fare']) for d in route_data]
+    # Cost trend analysis with ML predictions
+    cost_labels = [(timezone.now() - timedelta(days=x)).strftime('%Y-%m-%d') for x in range(7)][::-1]
+    cost_data = []
     
-    # Calculate efficiency based on speed and travel time
-    efficiency_data = transport_data.values('route_name').annotate(
-        efficiency=models.ExpressionWrapper(
-            models.F('average_speed') / models.F('travel_time'),
-            output_field=models.FloatField()
+    for route in route_data[:5]:  # Get predictions for top 5 routes
+        predicted_fare = ml.predict_fare(
+            route['route_name'],
+            route['predicted_congestion']
         )
-    ).order_by('route_name')
+        if predicted_fare > 0:
+            cost_data.append(round(predicted_fare, 2))
     
-    explorer_labels = [d['route_name'] for d in efficiency_data]
-    explorer_efficiency = [float(d['efficiency']) for d in efficiency_data]
-    
-    # Calculate passenger flow based on capacity and congestion
-    passenger_flows = []
-    for route in transport_data.order_by('route_name'):
-        load_percentage = get_load_value(route.congestion_level) / 100
-        passenger_flow = route.passenger_capacity * load_percentage
-        passenger_flows.append(passenger_flow)
-
     return {
-        'stations_count': total_stations,
-        'brt_stations': brt_stations,
-        'bus_stations': bus_stations,
-        'stations_utilization': 100,  # All stations are considered active
+        'total_stations': performance_metrics['total_stations'],
+        'bus_stations': len(data_df['bus_station'].unique()),
+        'brt_stations': len(data_df['brt_station'].unique()),
         
-        'system_load': round(current_load, 1),
-        'peak_load': round(peak_load, 1),
-        'off_peak_load': round(off_peak, 1),
-        'load_status': get_status_class(current_load),
+        'current_load': round(performance_metrics['avg_congestion'] * 33.33, 1),
+        'peak_load': round(performance_metrics['peak_load'] * 33.33, 1),
+        'off_peak': round(performance_metrics['off_peak_load'] * 33.33, 1),
         
-        'avg_fare': round(current_fares['avg_fare'], 2),
-        'min_fare': round(current_fares['min_fare'], 2),
-        'max_fare': round(current_fares['max_fare'], 2),
-        'fare_trend': 0,  # No historical data for trend
-        'fare_trend_status': 'normal',
+        'route_performance': round(performance_metrics['avg_speed'] / performance_metrics['avg_travel_time'] * 100, 1),
+        'current_fares': {
+            'avg_fare': round(performance_metrics['avg_fare'], 2),
+            'min_fare': round(data_df['fare'].min(), 2),
+            'max_fare': round(data_df['fare'].max(), 2)
+        },
         
-        'route_performance': round(route_performance, 1),
-        'on_time_rate': round(route_performance, 1),  # Using route performance as proxy
-        'delay_rate': round(100 - route_performance, 1),
-        'performance_status': get_status_class(route_performance),
+        'station_data': station_data,
+        'route_data': route_data,
         
-        'congestion_labels': json.dumps(congestion_labels),
-        'congestion_data': json.dumps(congestion_values),
-        'cost_labels': json.dumps(route_labels),
-        'cost_data': json.dumps(route_costs),
-        'explorer_labels': json.dumps(explorer_labels),
-        'explorer_efficiency': json.dumps(explorer_efficiency),
-        'explorer_flow': json.dumps(passenger_flows),
+        # ML insights
+        'congestion_patterns': congestion_patterns,
+        'station_clusters': station_clusters,
         
-        'stations': station_data,
-        'routes': get_route_data(transport_data),
+        # Chart data
+        'congestion_labels': json.dumps(congestion_data.index.tolist()),
+        'congestion_data': json.dumps(congestion_data.values.tolist()),
+        'route_labels': json.dumps(route_speeds['route_name'].tolist()),
+        'route_speeds': json.dumps(route_speeds['average_speed'].tolist()),
+        'cost_labels': json.dumps(cost_labels),
+        'cost_data': json.dumps(cost_data),
+        'explorer_labels': json.dumps([r['route_name'] for r in route_data]),
+        'explorer_data': json.dumps([r['efficiency_score'] for r in route_data]),
+        
+        # Last update timestamp
+        'last_update': timezone.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
 def get_status_class(value):
     if value <= 50:
-        return 'normal'
+        return 'low'
     elif value <= 75:
-        return 'warning'
-    return 'critical'
+        return 'medium'
+    return 'high'
 
-def get_route_data(transport_data):
-    routes = transport_data.values('route_name').annotate(
-        avg_speed=models.Avg('average_speed'),
-        avg_congestion=models.Count('congestion_level'),
-        avg_cost=models.Avg('fare')
-    )
-    
-    return [{
-        'name': route['route_name'],
-        'type': 'BRT' if 'BRT' in route['route_name'] else 'Bus',
-        'avg_speed': round(route['avg_speed'], 1),
-        'congestion_level': round((route['avg_congestion'] / transport_data.count()) * 100, 1),
-        'congestion_status': get_status_class(route['avg_congestion']),
-        'cost_per_km': round(route['avg_cost'], 2)
-    } for route in routes]
+def get_empty_report():
+    """Return empty report data when no records exist"""
+    return {
+        'total_stations': 0,
+        'bus_stations': 0,
+        'brt_stations': 0,
+        'current_load': 0.0,
+        'peak_load': 0.0,
+        'off_peak': 0.0,
+        'route_performance': 0.0,
+        'current_fares': {
+            'avg_fare': 0.0,
+            'min_fare': 0.0,
+            'max_fare': 0.0
+        },
+        'station_data': [],
+        'route_data': [],
+        'congestion_patterns': {
+            'overall_patterns': {},
+            'peak_patterns': {},
+            'most_congested_routes': []
+        },
+        'station_clusters': [],
+        'congestion_labels': '[]',
+        'congestion_data': '[]',
+        'route_labels': '[]',
+        'route_speeds': '[]',
+        'cost_labels': '[]',
+        'cost_data': '[]',
+        'explorer_labels': '[]',
+        'explorer_data': '[]',
+        'last_update': timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
 
 @csrf_exempt
 def update_report(request):
+    """Update report data based on date range"""
     return JsonResponse(get_report_data())
 
 @csrf_exempt
 def filter_report(request):
-    data = json.loads(request.body)
-    filtered_data = TransportData.objects.all()
-    
-    if data['stationType'] != 'all':
-        if data['stationType'] == 'bus':
-            filtered_data = filtered_data.exclude(bus_station='')
-        else:  # brt
-            filtered_data = filtered_data.exclude(brt_station='')
-    
-    if data['routeType'] != 'all':
-        filtered_data = filtered_data.filter(route_type__icontains=data['routeType'])
-    
-    if data['congestionLevel'] != 'all':
-        level_mapping = {
-            'low': 'Low',
-            'medium': 'Medium',
-            'high': 'High'
-        }
-        filtered_data = filtered_data.filter(congestion_level=level_mapping[data['congestionLevel']])
-    
-    return JsonResponse(get_report_data())
+    """Filter report data based on selected filters"""
+    if request.method == 'POST':
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        # In a real application, you would filter data based on dates
+        return JsonResponse(get_report_data())
+    return JsonResponse({'error': 'Invalid request method'})

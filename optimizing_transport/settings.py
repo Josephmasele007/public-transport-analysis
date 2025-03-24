@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,18 +38,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-        # Third-party apps
+    'reports',
+    'dashboard',
     'rest_framework',
     'import_export',
-
-    # Custom apps
-    'dashboard',
     'explorer',
     'stations',
     'congestion',
     'travel_cost',
-    'reports',
     'admin_panel',
     'core',
     'home',
@@ -88,12 +85,29 @@ WSGI_APPLICATION = 'optimizing_transport.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+DATABASE_ENGINE = os.getenv("DATABASE_ENGINE", "sqlite")
+
+if DATABASE_ENGINE == "postgres":
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv("POSTGRES_DB", "transport_analysis_db"),
+            'USER': os.getenv("POSTGRES_USER", "Joseph"),
+            'PASSWORD': os.getenv("POSTGRES_PASSWORD", "transport123"),
+            'HOST': os.getenv("POSTGRES_HOST", "localhost"),
+            'PORT': os.getenv("POSTGRES_PORT", "5432"),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -143,4 +157,3 @@ MEDIA_URL = '/media/'
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_ROOT = BASE_DIR / "media"
-

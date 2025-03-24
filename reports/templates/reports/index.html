@@ -1,561 +1,518 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Reports - Tanzania Transport Analysis{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
-<style>
-    @media print {
-        .no-print {
-            display: none !important;
-        }
-        .print-break {
-            page-break-before: always;
-        }
-        .chart-container {
-            height: 400px !important;
-            margin-bottom: 30px;
-        }
-    }
-    .report-card {
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: transform 0.2s;
-        margin-bottom: 20px;
-    }
-    .report-card:hover {
-        transform: translateY(-5px);
-    }
-    .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #2c3e50;
-    }
-    .metric-label {
-        color: #7f8c8d;
-        font-size: 0.9rem;
-    }
-    .chart-container {
-        position: relative;
-        height: 300px;
-        margin-bottom: 20px;
-    }
-    .data-table {
-        font-size: 0.9rem;
-    }
-    .status-badge {
-        padding: 0.25rem 0.5rem;
-        border-radius: 15px;
-        font-size: 0.8rem;
-    }
-    .status-normal {
-        background-color: #2ecc71;
-        color: white;
-    }
-    .status-warning {
-        background-color: #f1c40f;
-        color: black;
-    }
-    .status-critical {
-        background-color: #e74c3c;
-        color: white;
-    }
-    .progress {
-        height: 4px;
-        margin-top: 0.5rem;
-    }
-    .progress-bar {
-        background-color: #3498db;
-    }
-    .filters {
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Header and Controls -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3">Transport System Analytics Report</h1>
-            <p class="text-muted">Comprehensive analysis from {{ start_date }} to {{ end_date }}</p>
-        </div>
-        <div class="no-print">
-            <div class="btn-group">
-                <button class="btn btn-outline-primary" id="dateRange">
-                    <i class="fas fa-calendar me-2"></i>Date Range
-                </button>
-                <button class="btn btn-outline-success" onclick="exportToPDF()">
-                    <i class="fas fa-file-pdf me-2"></i>Export PDF
-                </button>
-                <button class="btn btn-outline-info" onclick="window.print()">
-                    <i class="fas fa-print me-2"></i>Print
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="filters no-print">
-        <div class="row">
-            <div class="col-md-3">
-                <label class="form-label">Station Type</label>
-                <select class="form-select" id="stationType">
-                    <option value="all">All Stations</option>
-                    <option value="bus">Bus Stations</option>
-                    <option value="brt">BRT Stations</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Route Type</label>
-                <select class="form-select" id="routeType">
-                    <option value="all">All Routes</option>
-                    <option value="main">Main Routes</option>
-                    <option value="feeder">Feeder Routes</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Congestion Level</label>
-                <select class="form-select" id="congestionLevel">
-                    <option value="all">All Levels</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">&nbsp;</label>
-                <button class="btn btn-primary w-100" onclick="applyFilters()">
-                    <i class="fas fa-filter me-2"></i>Apply Filters
-                </button>
-            </div>
-        </div>
+    <!-- Print Button and Current Date -->
+    <div class="d-flex justify-content-between mb-4">
+        <div id="current-date" class="text-muted"></div>
+        <button class="btn btn-primary" onclick="window.print()">Print Report</button>
     </div>
 
     <!-- Summary Cards -->
-    <div class="row mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h6 class="metric-label">Active Stations</h6>
-                    <div class="metric-value">{{ stations_count }}</div>
-                    <div class="d-flex justify-content-between">
+            <div class="report-card p-3 bg-white">
+                <h6 class="text-muted">Active Stations</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="metric-value">{{ total_stations }}</div>
+                    <div class="text-muted">
+                        <small>Bus: {{ bus_stations }}</small><br>
                         <small>BRT: {{ brt_stations }}</small>
-                        <small>Bus: {{ bus_stations }}</small>
-                    </div>
-                    <div class="progress">
-                        <div class="progress-bar" style="width: {{ stations_utilization }}%"></div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h6 class="metric-label">System Load</h6>
-                    <div class="metric-value">{{ system_load }}%</div>
-                    <div class="d-flex justify-content-between">
-                        <small>Peak: {{ peak_load }}%</small>
-                        <small>Off-Peak: {{ off_peak_load }}%</small>
-                    </div>
-                    <div class="progress">
-                        <div class="progress-bar bg-{{ load_status }}" style="width: {{ system_load }}%"></div>
-                    </div>
+            <div class="report-card p-3 bg-white">
+                <h6 class="text-muted">System Load</h6>
+                <div class="metric-value">{{ current_load }}%</div>
+                <div class="progress mt-2 progress-custom-height">
+                    <div class="progress-bar" role="progressbar" title="Current Load: {{ current_load }}%" data-load="{{ current_load }}"></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h6 class="metric-label">Average Travel Cost</h6>
-                    <div class="metric-value">{{ avg_fare }} TZS</div>
-                    <div class="d-flex justify-content-between">
-                        <small>Min: {{ min_fare }} TZS</small>
-                        <small>Max: {{ max_fare }} TZS</small>
-                    </div>
-                    <small class="text-{{ fare_trend_status }}">{{ fare_trend }}% from last period</small>
+            <div class="report-card p-3 bg-white">
+                <h6 class="text-muted">Route Performance</h6>
+                <div class="metric-value">{{ route_performance }}%</div>
+                <div class="progress mt-2 progress-custom-height">
+                    <div class="progress-bar" role="progressbar" title="Route Performance: {{ route_performance }}%" data-performance="{{ route_performance }}"></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h6 class="metric-label">Route Performance</h6>
-                    <div class="metric-value">{{ route_performance }}%</div>
-                    <div class="d-flex justify-content-between">
-                        <small>On-Time: {{ on_time_rate }}%</small>
-                        <small>Delayed: {{ delay_rate }}%</small>
-                    </div>
-                    <div class="progress">
-                        <div class="progress-bar bg-{{ performance_status }}" style="width: {{ route_performance }}%"></div>
-                    </div>
+            <div class="report-card p-3 bg-white">
+                <h6 class="text-muted">Average Fare</h6>
+                <div class="metric-value">{{ current_fares.avg_fare|floatformat:2 }} TZS</div>
+                <div class="text-muted">
+                    <small>Min: {{ current_fares.min_fare|floatformat:2 }} TZS</small><br>
+                    <small>Max: {{ current_fares.max_fare|floatformat:2 }} TZS</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Charts Section -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h5 class="card-title">Congestion Trends</h5>
-                    <div class="chart-container">
-                        <canvas id="congestionChart"></canvas>
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link active" href="#station-performance">Station Performance</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#route-analysis">Route Analysis</a>
+        </li>
+        <li class="nav-item">
+            <!-- <a class="nav-link" href="#congestion-trends">Congestion Trends</a> -->
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#travel-cost">Travel Cost Analysis</a>
+        </li>
+        <li class="nav-item">
+            <!-- <a class="nav-link" href="#route-explorer">Route Explorer</a> -->
+        </li>
+    </ul>
+
+    <!-- Station Performance -->
+    <div id="station-performance" class="mb-5">
+        <h4 class="mb-4">Station Performance Analysis</h4>
+        <div class="row g-3">
+            {% for station in station_data %}
+            <div class="col-md-4">
+                <div class="report-card p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6>{{ station.name }}</h6>
+                        <span class="badge bg-{{ station.status_class }}">{{ station.type|upper }}</span>
                     </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Current Load</span>
+                        <span>{{ station.current_load }}%</span>
+                    </div>
+                    <div class="progress mb-3 progress-custom-height">
+                        <div class="progress-bar bg-{{ station.status_class }}" role="progressbar" title="Current Load: {{ station.current_load }}%" data-load="{{ station.current_load }}"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Wait Time</span>
+                        <span>{{ station.wait_time }} min</span>
+                    </div>
+                    <!--
+                    {% if station.recommendations %}
+                    <div class="mt-3">
+                        <small class="text-muted d-block mb-2">Recommended Routes:</small>
+                        {% for route in station.recommendations %}
+                        <span class="badge bg-light text-dark me-1">{{ route }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    -->
                 </div>
             </div>
+            {% endfor %}
         </div>
-        <div class="col-md-6">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h5 class="card-title">Travel Cost Analysis</h5>
-                    <div class="chart-container">
-                        <canvas id="costChart"></canvas>
+    </div>
+
+    <!-- Route Analysis -->
+    <div id="route-analysis" class="mb-5">
+        <h4 class="mb-4">Route Performance Analysis</h4>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Route Name</th>
+                        <th>Avg Speed</th>
+                        <th>Avg Fare</th>
+                        <th>Predicted Congestion</th>
+                        <!-- <th>Peak Performance</th> -->
+                        <th>Efficiency Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for route in route_data %}
+                    <tr>
+                        <td>{{ route.route_name }}</td>
+                        <td>{{ route.avg_speed|floatformat:1 }} km/h</td>
+                        <td>{{ route.avg_fare|floatformat:2 }} TZS</td>
+                        <td>
+                            <span class="badge badge-{{ route.predicted_congestion|lower }}">
+                                {{ route.predicted_congestion }}
+                            </span>
+                        </td>
+                        <!-- <td>{{ route.peak_performance|floatformat:1 }} min</td> -->
+                        <td>
+                            <div class="progress progress-custom-width">
+                                <div class="progress-bar efficiency-score-bar" role="progressbar" title="Efficiency Score: {{ route.efficiency_score }}%" data-score="{{ route.efficiency_score }}"></div>
+                            </div>
+                            <small class="text-muted">{{ route.efficiency_score }}%</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Congestion Analysis -->
+    <div id="congestion-trends" class="mb-5">
+        <h4 class="mb-4">Congestion Analysis</h4>
+        <div class="row g-3">
+            <!--
+            <div class="col-md-8">
+                <div class="report-card p-3 bg-white">
+                    <canvas id="congestionChart"></canvas>
+                </div>
+            </div>
+            -->
+            <div class="col-md-12">
+                <div class="report-card p-3 bg-white">
+                    <h6 class="mb-3">Peak Hours Analysis</h6>
+                    <div class="d-flex justify-content-between mb-4">
+                        <div>
+                            <div class="text-muted mb-1">Peak Load</div>
+                            <div class="h4">{{ peak_load }}%</div>
+                        </div>
+                        <div>
+                            <div class="text-muted mb-1">Off-Peak Load</div>
+                            <div class="h4">{{ off_peak }}%</div>
+                        </div>
                     </div>
+                    <h6 class="mb-3">Congestion Patterns</h6>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Pattern</th>
+                                <th>Peak Hours</th>
+                                <th>Overall</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pattern, data in congestion_patterns.items %}
+                            <tr>
+                                <td>{{ pattern }}</td>
+                                <td>{{ data.peak_hours }}</td>
+                                <td>{{ data.overall }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Explorer Data -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h5 class="card-title">Route Explorer Analysis</h5>
-                    <div class="chart-container">
-                        <canvas id="explorerChart"></canvas>
-                    </div>
+    <!-- Travel Cost Analysis -->
+    <div id="travel-cost" class="mb-5">
+        <h4 class="mb-4">Travel Cost Analysis</h4>
+        <div class="row g-3">
+            <!--
+            <div class="col-md-8">
+                <div class="report-card p-3 bg-white">
+                    <canvas id="costTrendChart"></canvas>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Detailed Tables -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h5 class="card-title">Station Performance</h5>
-                    <div class="table-responsive">
-                        <table class="table table-hover data-table" id="stationTable">
-                            <thead>
-                                <tr>
-                                    <th>Station</th>
-                                    <th>Type</th>
-                                    <th>Load</th>
-                                    <th>Wait Time</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for station in stations %}
-                                <tr>
-                                    <td>{{ station.name }}</td>
-                                    <td>{{ station.type }}</td>
-                                    <td>{{ station.current_load }}%</td>
-                                    <td>{{ station.wait_time }} min</td>
-                                    <td>
-                                        <span class="status-badge status-{{ station.status }}">
-                                            {{ station.status|title }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 mb-4">
-            <div class="card report-card">
-                <div class="card-body">
-                    <h5 class="card-title">Route Analysis</h5>
-                    <div class="table-responsive">
-                        <table class="table table-hover data-table" id="routeTable">
-                            <thead>
-                                <tr>
-                                    <th>Route</th>
-                                    <th>Type</th>
-                                    <th>Avg Speed</th>
-                                    <th>Congestion</th>
-                                    <th>Cost/km</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for route in routes %}
-                                <tr>
-                                    <td>{{ route.name }}</td>
-                                    <td>{{ route.type }}</td>
-                                    <td>{{ route.avg_speed }} km/h</td>
-                                    <td>
-                                        <span class="status-badge status-{{ route.congestion_status }}">
-                                            {{ route.congestion_level }}%
-                                        </span>
-                                    </td>
-                                    <td>{{ route.cost_per_km }} TZS</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+            -->
+            <div class="col-md-12">
+                <div class="report-card p-3 bg-white">
+                    <h6 class="mb-3">Fare Statistics</h6>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Average Fare:</td>
+                                <td class="text-end">{{ current_fares.avg_fare|floatformat:2 }} TZS</td>
+                            </tr>
+                            <tr>
+                                <td>Minimum Fare:</td>
+                                <td class="text-end">{{ current_fares.min_fare|floatformat:2 }} TZS</td>
+                            </tr>
+                            <tr>
+                                <td>Maximum Fare:</td>
+                                <td class="text-end">{{ current_fares.max_fare|floatformat:2 }} TZS</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style type="text/css">
+/* Report Cards */
+.report-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+    padding: 0;
+    background-color: #fff;
+}
+
+/* Report Headers */
+.report-header {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    margin: 0;
+}
+
+/* Report Body */
+.report-body {
+    padding: 1rem;
+    margin: 0;
+}
+
+/* Progress Bars */
+.progress {
+    height: 8px;
+    margin: 0.5rem 0;
+    background-color: #f5f5f5;
+}
+
+/* Navigation */
+.nav-tabs {
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Charts */
+.chart-container {
+    height: 300px;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+/* Metrics */
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: #666;
+    margin: 0;
+}
+
+/* Badge Colors for Predicted Congestion */
+.badge-low {
+    background-color: #28a745; /* Green */
+    color: #fff;
+}
+
+.badge-medium {
+    background-color: #ffc107; /* Yellow */
+    color: #fff;
+}
+
+.badge-high {
+    background-color: #dc3545; /* Red */
+    color: #fff;
+}
+
+/* Adjust the width of the remaining cards */
+.col-md-12 {
+    flex: 0 0 auto;
+    width: 100%;
+}
+/* Custom Progress Bar Height */
+.progress-custom-height {
+    height: 5px;
+}
+
+/* Custom Progress Bar Width */
+.progress-bar {
+    width: 100%;
+}
+
+.progress-bar[data-performance] {
+    width: attr(data-performance percentage);
+}
+
+/* Custom Progress Bar Width */
+.progress-custom-width {
+    width: 100px;
+}
+/* Custom Progress Bar Height */
+.progress-custom-height {
+    height: 5px;
+}
+.efficiency-score-bar {
+    width: 0;
+}
+
+.efficiency-score-bar[data-score] {
+    width: attr(data-score percentage);
+}
+
+.progress-bar[data-load] {
+    width: attr(data-load percentage);
+}
+
+.progress-bar {
+    width: 0;
+}
+
+.progress-bar[data-load] {
+    width: attr(data-load percentage);
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/moment/moment.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize date range picker
-    $('#dateRange').daterangepicker({
-        startDate: moment().subtract(7, 'days'),
-        endDate: moment(),
-        ranges: {
-           'Today': [moment(), moment()],
-           'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-           'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-           'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-           'This Month': [moment().startOf('month'), moment().endOf('month')],
-           'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
-        }
-    }, function(start, end) {
-        updateDateRange(start, end);
-    });
+<script type="text/javascript">
+(function() {
+    'use strict';
+    
+    // Function to load the current date
+    function loadCurrentDate() {
+        const currentDateElement = document.getElementById('current-date');
+        const currentDate = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        currentDateElement.textContent = currentDate.toLocaleDateString(undefined, options);
+    }
 
-    // Initialize charts
-    initializeCharts();
-});
-
-function initializeCharts() {
-    // Congestion Chart
-    const congestionCtx = document.getElementById('congestionChart').getContext('2d');
-    const congestionChart = new Chart(congestionCtx, {
-        type: 'line',
-        data: {
-            labels: JSON.parse('{{ congestion_labels|escapejs }}'),
-            datasets: [{
-                label: 'Average Congestion Level',
-                data: JSON.parse('{{ congestion_data|escapejs }}'),
-                borderColor: '#2980b9',
-                tension: 0.4,
-                fill: false
-            }]
+    const chartData = {
+        congestion: {
+            labels: JSON.parse('{{ congestion_labels|default:"[]"|escapejs }}'),
+            data: JSON.parse('{{ congestion_data|default:"[]"|escapejs }}')
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-
-    // Cost Chart
-    const costCtx = document.getElementById('costChart').getContext('2d');
-    const costChart = new Chart(costCtx, {
-        type: 'bar',
-        data: {
-            labels: JSON.parse('{{ cost_labels|escapejs }}'),
-            datasets: [{
-                label: 'Average Cost per Route',
-                data: JSON.parse('{{ cost_data|escapejs }}'),
-                backgroundColor: '#27ae60',
-                borderColor: '#219a52',
-                borderWidth: 1
-            }]
+        cost: {
+            labels: JSON.parse('{{ cost_labels|default:"[]"|escapejs }}'),
+            data: JSON.parse('{{ cost_data|default:"[]"|escapejs }}')
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+        explorer: {
+            labels: JSON.parse('{{ explorer_labels|default:"[]"|escapejs }}'),
+            data: JSON.parse('{{ explorer_data|default:"[]"|escapejs }}')
         }
-    });
-
-    // Explorer Chart
-    const explorerCtx = document.getElementById('explorerChart').getContext('2d');
-    const explorerChart = new Chart(explorerCtx, {
-        type: 'line',
-        data: {
-            labels: JSON.parse('{{ explorer_labels|escapejs }}'),
-            datasets: [
-                {
-                    label: 'Route Efficiency',
-                    data: JSON.parse('{{ explorer_efficiency|escapejs }}'),
-                    borderColor: '#8e44ad',
-                    tension: 0.4,
-                    fill: false
-                },
-                {
-                    label: 'Passenger Flow',
-                    data: JSON.parse('{{ explorer_flow|escapejs }}'),
-                    borderColor: '#e67e22',
-                    tension: 0.4,
-                    fill: false
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
-function updateDateRange(start, end) {
-    // Make AJAX call to update report data
-    fetch(`/reports/update/?start=${start.format('YYYY-MM-DD')}&end=${end.format('YYYY-MM-DD')}`)
-        .then(response => response.json())
-        .then(data => {
-            // Update charts and tables with new data
-            updateCharts(data);
-            updateTables(data);
-        });
-}
-
-function applyFilters() {
-    const filters = {
-        stationType: document.getElementById('stationType').value,
-        routeType: document.getElementById('routeType').value,
-        congestionLevel: document.getElementById('congestionLevel').value
     };
 
-    fetch('/reports/filter/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify(filters)
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Update charts and tables with filtered data
-        updateCharts(data);
-        updateTables(data);
-    });
-}
-
-function exportToPDF() {
-    const element = document.querySelector('.container-fluid');
-    html2canvas(element).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save('transport-report.pdf');
-    });
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+    function createChartConfig(type, labels, data, options = {}) {
+        const baseConfig = {
+            type: type,
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                ...options
             }
+        };
+
+        if (type === 'bar') {
+            baseConfig.data.datasets[0].backgroundColor = 'rgba(54, 162, 235, 0.5)';
+            baseConfig.data.datasets[0].borderColor = 'rgba(54, 162, 235, 1)';
+        } else if (type === 'line') {
+            baseConfig.data.datasets[0].borderColor = 'rgba(75, 192, 192, 1)';
+            baseConfig.data.datasets[0].fill = false;
+            baseConfig.data.datasets[0].tension = 0.1;
         }
+
+        return baseConfig;
     }
-    return cookieValue;
-}
 
-function updateCharts(data) {
-    // Update each chart with new data
-    congestionChart.data.labels = data.congestion_labels;
-    congestionChart.data.datasets[0].data = data.congestion_data;
-    congestionChart.update();
+    function initializeCharts() {
+        const charts = {};
+        
+        // Congestion Chart
+        const congestionConfig = createChartConfig('bar', 
+            chartData.congestion.labels, 
+            chartData.congestion.data,
+            {
+                scales: { y: { beginAtZero: true } }
+            }
+        );
+        congestionConfig.data.datasets[0].label = 'Congestion Distribution';
 
-    costChart.data.labels = data.cost_labels;
-    costChart.data.datasets[0].data = data.cost_data;
-    costChart.update();
+        // Cost Trend Chart
+        const costConfig = createChartConfig('line',
+            chartData.cost.labels,
+            chartData.cost.data
+        );
+        costConfig.data.datasets[0].label = 'Fare Trend';
 
-    explorerChart.data.labels = data.explorer_labels;
-    explorerChart.data.datasets[0].data = data.explorer_efficiency;
-    explorerChart.data.datasets[1].data = data.explorer_flow;
-    explorerChart.update();
-}
+        // Route Explorer Chart
+        const explorerConfig = createChartConfig('bar',
+            chartData.explorer.labels,
+            chartData.explorer.data,
+            {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        );
+        explorerConfig.data.datasets[0].label = 'Route Efficiency Score';
+        explorerConfig.data.datasets[0].backgroundColor = 'rgba(153, 102, 255, 0.5)';
+        explorerConfig.data.datasets[0].borderColor = 'rgba(153, 102, 255, 1)';
 
-function updateTables(data) {
-    // Update station table
-    const stationTable = document.getElementById('stationTable').getElementsByTagName('tbody')[0];
-    stationTable.innerHTML = data.stations.map(station => `
-        <tr>
-            <td>${station.name}</td>
-            <td>${station.type}</td>
-            <td>${station.current_load}%</td>
-            <td>${station.wait_time} min</td>
-            <td>
-                <span class="status-badge status-${station.status}">
-                    ${station.status}
-                </span>
-            </td>
-        </tr>
-    `).join('');
+        function createChart(elementId, config) {
+            const ctx = document.getElementById(elementId);
+            if (ctx) {
+                return new Chart(ctx, config);
+            }
+            return null;
+        }
 
-    // Update route table
-    const routeTable = document.getElementById('routeTable').getElementsByTagName('tbody')[0];
-    routeTable.innerHTML = data.routes.map(route => `
-        <tr>
-            <td>${route.name}</td>
-            <td>${route.type}</td>
-            <td>${route.avg_speed} km/h</td>
-            <td>
-                <span class="status-badge status-${route.congestion_status}">
-                    ${route.congestion_level}%
-                </span>
-            </td>
-            <td>${route.cost_per_km} TZS</td>
-        </tr>
-    `).join('');
-}
+        charts.congestion = createChart('congestionChart', congestionConfig);
+        charts.costTrend = createChart('costTrendChart', costConfig);
+        charts.routeExplorer = createChart('routeExplorerChart', explorerConfig);
+
+        return charts;
+    }
+
+    function initializeTabs() {
+        const tabs = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('[id$="-performance"], [id$="-analysis"], [id$="-trends"], [id$="-cost"], [id$="-explorer"]');
+        
+        if (sections.length > 0) {
+            sections.forEach((section, index) => {
+                section.style.display = index === 0 ? 'block' : 'none';
+            });
+        }
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                sections.forEach(section => {
+                    section.style.display = 'none';
+                });
+                
+                const targetId = this.getAttribute('href');
+                if (targetId) {
+                    const targetSection = document.getElementById(targetId.substring(1));
+                    if (targetSection) {
+                        targetSection.style.display = 'block';
+                        window.dispatchEvent(new Event('resize'));
+                    }
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            loadCurrentDate();
+            const charts = initializeCharts();
+            initializeTabs();
+        } catch (error) {
+            console.error('Error initializing reports:', error);
+        }
+    });
+})();
 </script>
 {% endblock %}
